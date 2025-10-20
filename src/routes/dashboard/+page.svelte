@@ -1,3 +1,8 @@
+<svelte:head>
+	<title>Dashboard - Expat Spanish Lessons</title>
+</svelte:head>
+
+
 <script>
   export let data;
 </script>

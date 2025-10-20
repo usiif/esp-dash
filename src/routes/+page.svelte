@@ -1,3 +1,8 @@
+<svelte:head>
+	<title>Login - Expat Spanish Lessons</title>
+</svelte:head>
+
+
 <script>
 	let email = '';
 	let message = '';

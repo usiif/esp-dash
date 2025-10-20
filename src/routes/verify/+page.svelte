@@ -1,3 +1,9 @@
+<svelte:head>
+	<title>Verify - Expat Spanish Lessons</title>
+</svelte:head>
+
+
+
 <script>
 	import { page } from '$app/stores';
 
