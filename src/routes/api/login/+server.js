@@ -1,7 +1,7 @@
 // src/routes/api/login/+server.js
 import { json } from '@sveltejs/kit';
 import { getContactByEmail } from '$lib/ghl.js';
-import { generateCode } from '$lib/utils.js';
+
 import { storeCode } from '$lib/supabase.js';
 import { sendCode } from '$lib/email.js';
 
