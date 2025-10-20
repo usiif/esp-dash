@@ -23,8 +23,7 @@ export async function POST({ request }) {
 		}
 
 		// 3️⃣ Generate a 6-digit verification code
-		const code = generateCode();
-
+		
 		// 4️⃣ Store it in Supabase for verification
 		await storeCode(email, code);
 
