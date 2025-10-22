@@ -1,13 +1,14 @@
-<svelte:head>
-	<title>Login - Expat Spanish Lessons</title>
-</svelte:head>
-
-
 <script>
+	import { goto } from '$app/navigation';
+
 	let email = '';
+	let loading = false;
 	let message = '';
 
 	async function sendCode() {
+		if (loading || !email) return;
+
+		loading = true;
 		message = '';
 
 		try {
@@ -20,13 +21,17 @@
 			const data = await res.json();
 
 			if (res.ok) {
-	window.location.href = `/verify?email=${encodeURIComponent(email)}`;
-} else {
-	message = data.error || 'Something went wrong.';
-}
+				// ✅ Redirect immediately (don’t reset loading)
+				goto(`/verify?email=${encodeURIComponent(email)}`);
+				return; // stop execution before finally runs
+			}
 
+			message = data.error || 'Something went wrong.';
 		} catch (err) {
 			message = 'Server unavailable. Please try again.';
+		} finally {
+			// 🧠 only reset loading if there was no redirect
+			if (!res?.ok) loading = false;
 		}
 	}
 </script>
@@ -34,9 +39,7 @@
 <div class="min-h-screen flex items-center justify-center bg-orange-50 text-gray-800">
 	<div class="bg-white shadow-md rounded-xl p-8 w-full max-w-sm border border-orange-100">
 		<h1 class="text-2xl font-semibold mb-4 text-orange-600">Welcome Back</h1>
-		<p class="text-sm text-gray-600 mb-6">
-			Enter your email and we’ll send you a verification code.
-		</p>
+		<p class="text-sm text-gray-600 mb-6">Enter your email to continue your Spanish journey.</p>
 
 		<input
 			bind:value={email}
@@ -48,9 +51,14 @@
 
 		<button
 			on:click={sendCode}
-			class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium transition"
+			class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium transition cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+			disabled={loading || !email}
 		>
-			Send Code
+			{#if loading}
+				Sending...
+			{:else}
+				Send me a code
+			{/if}
 		</button>
 
 		{#if message}

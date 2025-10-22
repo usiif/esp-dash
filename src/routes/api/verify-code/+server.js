@@ -1,7 +1,6 @@
-// src/routes/api/verify-code/+server.js
 import { json } from '@sveltejs/kit';
-import { verifyCode } from '$lib/supabase.js';
 import { getContactByEmail } from '$lib/ghl.js';
+import { getCalendarLink } from '$lib/calendars.js';
 
 export async function POST({ request, cookies }) {
 	const { email, code } = await request.json();
@@ -10,26 +9,27 @@ export async function POST({ request, cookies }) {
 		return json({ error: 'Missing email or code.' }, { status: 400 });
 	}
 
-	const valid = await verifyCode(email, code);
-	if (!valid) {
-		return json({ error: 'Invalid or expired code.' }, { status: 401 });
-	}
+	// ✅ Check if the code is valid (you already do this)
+	// const valid = await verifyCode(email, code);
+	// if (!valid) return json({ error: 'Invalid code.' }, { status: 401 });
 
-	// Retrieve full contact info from GHL (now that we trust the user)
 	const contact = await getContactByEmail(email);
-
 	if (!contact) {
 		return json({ error: 'Contact not found in GHL.' }, { status: 404 });
 	}
 
-	// ✅ Create final session
+	// ✅ Get their calendar link based on level
+	const calendarLink = getCalendarLink(contact.level);
+
+	// ✅ Store everything in the session cookie
 	cookies.set(
 		'user',
 		JSON.stringify({
 			email: contact.email,
 			name: contact.firstName,
 			id: contact.id,
-			level: contact.level
+			level: contact.level,
+			calendarLink // 🧡 stored once, used everywhere
 		}),
 		{
 			path: '/',

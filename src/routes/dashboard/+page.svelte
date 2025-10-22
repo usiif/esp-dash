@@ -40,33 +40,30 @@
       </div>
     </div>
 
-    <!-- Book Live Classes -->
-    <div class="bg-white p-6 rounded-xl border border-orange-100 shadow-sm">
-      <h3 class="font-semibold text-gray-800 mb-2">Book a Live Class</h3>
+    
+    
+    <!-- Book Live Classes (single button that opens the level's mega calendar) -->
+    <div class="bg-orange-50 border border-orange-100 rounded-xl p-5 shadow-sm">
+      <h3 class="text-base font-semibold text-gray-800 mb-2">Book a Live Class</h3>
       <p class="text-sm text-gray-600 mb-4">
-        Choose one of the available calendars for your level.
+        View your level’s live class calendar and book your next session.
       </p>
-
-      {#if data.calendars.length > 0}
-        <div class="space-y-2">
-          {#each data.calendars as c}
-            <a
-              href={c.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="block text-center bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 py-2 rounded-lg text-sm font-medium transition"
-            >
-              {c.name}
-            </a>
-          {/each}
-        </div>
+    
+      {#if data?.calendarLink}
+        <a
+          href={data.calendarLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-lg text-sm font-medium transition"
+        >
+          See Calendar &amp; Book Classes
+        </a>
       {:else}
-        <p class="text-sm text-gray-500 italic">
-          No calendars available for your level.
-        </p>
+        <p class="text-sm text-gray-500 italic">Your level isn’t set or no calendar is available.</p>
       {/if}
     </div>
-
+    
+    
     <div
       class="flex-1 bg-white p-6 rounded-xl border border-orange-100 shadow-sm"
     >
