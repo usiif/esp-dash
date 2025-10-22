@@ -1,3 +1,7 @@
+<svelte:head>
+	<title>Login- Expat Spanish Lessons</title>
+</svelte:head>
+
 <script>
 	import { goto } from '$app/navigation';
 
