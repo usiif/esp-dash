@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Login- Expat Spanish Lessons</title>
+	<title>Login - Expat Spanish Lessons</title>
 </svelte:head>
 
 <script>
