@@ -29,7 +29,7 @@ export async function POST({ request, cookies }) {
 			name: contact.firstName,
 			id: contact.id,
 			level: contact.level,
-			calendarLink // 🧡 stored once, used everywhere
+			calendarLink // 
 		}),
 		{
 			path: '/',

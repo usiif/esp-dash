@@ -57,3 +57,46 @@ export async function sendEmail(to, subject, body) {
 		return false;
 	}
 }
+
+/**
+ * Send onboarding magic link email.
+ * @param {string} email - Recipient's email.
+ * @param {string} token - Magic link token.
+ * @param {string} name  - Recipient's first name.
+ */
+// src/lib/email.js
+import { sendEmail } from '$lib/email.js'; // already exists
+// OR if this is the same file, just keep the function below the sendEmail() definition
+
+export async function sendMagicLink(email, token, name, portalMagic) {
+	const link = `https://my.expatspanishlessons.com/welcome?token=${token}`;
+
+	const subject = 'Welcome to Expat Spanish Lessons 🎉';
+
+	let body = `
+¡Hola ${name}! 👋
+
+Welcome to your Spanish learning journey.
+
+Click below to start your onboarding:
+${link}
+
+`;
+
+	// Add optional portal link if provided
+	if (portalMagic) {
+		body += `
+You can also access your Student Portal directly here:
+${portalMagic}
+
+`;
+	}
+
+	body += `
+This link will expire in 48 hours.
+
+— The Expat Spanish Lessons Team
+`;
+
+	return await sendEmail(email, subject, body);
+}

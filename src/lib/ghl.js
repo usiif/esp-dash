@@ -49,7 +49,6 @@ export async function getContactByEmail(email) {
 }
 
 
-
 export async function getUpcomingAppointments(contactID) {
 	if (!contactID) {
 		console.error('❌ getUpcomingAppointments called without contact ID');
@@ -89,25 +88,20 @@ export async function getUpcomingAppointments(contactID) {
 		for (const e of result.events) {
 			if (!e) continue;
 
-			// Skip cancelled appointments
+			// Skip cancelled or past appointments
 			if (e.appointmentStatus?.toLowerCase() !== 'confirmed') continue;
 
-			// Parse and format time
-			let formatted = 'Unknown time';
-			try {
-				const start = new Date(e.startTime);
-				if (!isNaN(start)) {
-					formatted = start.toLocaleString('en-US', {
-						weekday: 'short',
-						month: 'short',
-						day: 'numeric',
-						hour: 'numeric',
-						minute: '2-digit'
-					});
-				}
-			} catch (tErr) {
-				console.warn('⚠️ Invalid date format:', e.startTime);
-			}
+			const start = new Date(e.startTime);
+			if (isNaN(start.getTime()) || start < now) continue; // ⬅️ Skip past events
+
+			// Format start time (CST, just formatted string)
+			const formatted = start.toLocaleString('en-US', {
+				weekday: 'short',
+				month: 'short',
+				day: 'numeric',
+				hour: 'numeric',
+				minute: '2-digit'
+			});
 
 			upcoming.push({
 				title: e.title || 'Session',
@@ -118,7 +112,7 @@ export async function getUpcomingAppointments(contactID) {
 			});
 		}
 
-		console.log(`✅ Found ${upcoming.length} upcoming appointments.`);
+		console.log(`✅ Found ${upcoming.length} upcoming appointments (future only).`);
 		return upcoming;
 	} catch (err) {
 		console.error('❌ Error inside getUpcomingAppointments():', err);
