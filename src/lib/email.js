@@ -65,8 +65,6 @@ export async function sendEmail(to, subject, body) {
  * @param {string} name  - Recipient's first name.
  */
 // src/lib/email.js
-import { sendEmail } from '$lib/email.js'; // already exists
-// OR if this is the same file, just keep the function below the sendEmail() definition
 
 export async function sendMagicLink(email, token, name, portalMagic) {
 	const link = `https://my.expatspanishlessons.com/welcome?token=${token}`;
