@@ -3,51 +3,46 @@ import { json } from '@sveltejs/kit';
 import { sendMagicLink } from '$lib/email.js';
 import { storeMagicLink } from '$lib/supabase.js';
 import { generateToken } from '$lib/utils.js';
+import { env } from '$env/dynamic/private';
+
+const WEBHOOK_SECRET = env.WEBHOOK_SECRET; // 
 
 export async function POST({ request }) {
-  console.log('📩 Incoming webhook from GHL');
+	let payload;
 
-  let payload;
-  try {
-    payload = await request.json();
-    console.log('🔍 Raw payload received:', JSON.stringify(payload, null, 2));
-  } catch (err) {
-    console.error('❌ Failed to parse JSON payload:', err);
-    return json({ error: 'Invalid JSON payload' }, { status: 400 });
-  }
+	try {
+		payload = await request.json();
+	} catch {
+		return json({ error: 'Invalid JSON payload' }, { status: 400 });
+	}
 
-  // Extract useful fields
-  const email = payload.email || payload.Email || null;
-  const name = payload.first_name || payload.full_name || 'Friend';
-  const level = payload['Access Level'] || payload['AI Recommended Level'] || 'Level 1';
-  const contactId = payload.contact_id || null;
-  const portalMagic = payload?.customData?.portal_magic || null;
+	// ✅ Secret validation (required)
+	const secret = payload?.customData?.secret;
+	if (secret !== WEBHOOK_SECRET) {
+		return json({ error: 'Unauthorized' }, { status: 403 });
+	}
 
-  console.log(`📧 Preparing magic link for ${name} (${email})`);
-  console.log(`🧠 Access Level: ${level}`);
-  console.log(`🆔 Contact ID: ${contactId}`);
-  console.log(`✨ Portal Magic Link: ${portalMagic || 'none provided'}`);
+	// ✅ Extract useful fields
+	const email = payload.email || payload.Email;
+	const name = payload.first_name || payload.full_name || 'Student';
+	const level = payload['Access Level'] || payload['AI Recommended Level'] || 'Level 1';
+	const portalMagic = payload?.customData?.portal_magic || null;
 
-  try {
-    if (!email) {
-      console.warn('⚠️ Missing email, skipping sendMagicLink');
-      return json({ error: 'Missing email in payload' }, { status: 400 });
-    }
+	if (!email) {
+		return json({ error: 'Missing email' }, { status: 400 });
+	}
 
-    const token = generateToken();
-    console.log(`🪄 Generated token: ${token}`);
+	try {
+		const token = generateToken();
 
-    // Store in Supabase (storeMagicLink now accepts portalMagic)
-    await storeMagicLink(email, token, portalMagic, level);
-    console.log('💾 Token + PortalMagic stored successfully in Supabase.');
+		// Save to Supabase (token + portal + level)
+		await storeMagicLink(email, token, portalMagic, level);
 
-    // Send the email (includes portal link if available)
-    await sendMagicLink(email, token, name, portalMagic);
-    console.log(`✅ Magic link sent to ${email}`);
+		// Send welcome + magic link email
+		await sendMagicLink(email, token, name);
 
-    return json({ success: true });
-  } catch (err) {
-    console.error('🔥 Error processing webhook:', err);
-    return json({ error: 'Internal server error' }, { status: 500 });
-  }
+		return json({ success: true });
+	} catch {
+		return json({ error: 'Internal server error' }, { status: 500 });
+	}
 }

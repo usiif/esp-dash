@@ -1,9 +1,6 @@
-// src/lib/email.js
+import { env } from '$env/dynamic/private';
 
-/**
- * Generate a 4-character verification code.
- */
-// src/lib/utils.js
+
 export function generateCode() {
 	const digits = '0123456789';
 	let code = '';
@@ -21,8 +18,8 @@ export function generateCode() {
  * @returns {Promise<boolean>} true if sent successfully, false otherwise.
  */
 export async function sendEmail(to, subject, body) {
-	const apiKey = "api-6A5EE9FE7D2C424FAA6FF5C0F127A432"; // store in .env
-	const sender = "tools@usif.online";  // e.g. "noreply@yourdomain.com"
+	const apiKey = env.SMTP2GO_API_KEY;
+	const sender = env.SMTP2GO_SENDER;  
 
 	if (!apiKey || !sender) {
 		console.error('❌ SMTP2GO not configured: missing API key or sender.');

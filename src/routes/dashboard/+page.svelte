@@ -3,12 +3,28 @@
 </svelte:head>
 
 <script>
+  	import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import Onboarding from '$lib/components/onboarding.svelte'
  
   export let data;
 
+  onMount(() => {
+		// Prevent multiple script injections on client navigation
+		if (document.getElementById('leadconnector-chat-widget')) return;
+
+		const script = document.createElement('script');
+		script.src = 'https://widgets.leadconnectorhq.com/loader.js';
+		script.dataset.resourcesUrl = 'https://widgets.leadconnectorhq.com/chat-widget/loader.js';
+		script.dataset.widgetId = '68fe0a70bb21f16ca0a3bafe';
+		script.id = 'leadconnector-chat-widget';
+		document.body.appendChild(script);
+
+		console.log('💬 LeadConnector chat widget loaded');
+	});
+
 </script>
+
 
 <div class="min-h-screen bg-orange-50 text-gray-800">
   <!-- Navbar -->

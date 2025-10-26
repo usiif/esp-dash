@@ -1,16 +1,19 @@
+import { env } from '$env/dynamic/private';
+
+const API_KEY = env.GHL_API_KEY;
+
+
 const BASE_URL = 'https://services.leadconnectorhq.com';
-const API_KEY = "pit-a01dfa57-c97c-445b-881e-fda308798116"; // set via env
+
 
 // src/lib/ghl.js
 export async function getContactByEmail(email) {
-	const apiKey = "pit-a01dfa57-c97c-445b-881e-fda308798116";
-	const url = 'https://services.leadconnectorhq.com/contacts/search';
 
 	try {
-		const res = await fetch(url, {
+		const res = await fetch(BASE_URL, {
 			method: 'POST',
 			headers: {
-				'Authorization': `Bearer ${apiKey}`,
+				'Authorization': `Bearer ${API_KEY}`,
 				'Version': '2021-07-28',
 				'Content-Type': 'application/json'
 			},

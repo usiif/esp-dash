@@ -1,9 +1,10 @@
 // src/lib/supabase.js
 import { createClient } from "@supabase/supabase-js";
+import { env } from '$env/dynamic/private';
 
 export const supabase = createClient(
-  "https://vvvfccjkejzxhtrqczhm.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2dmZjY2prZWp6eGh0cnFjemhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4OTE5ODcsImV4cCI6MjA3NjQ2Nzk4N30.l3fCdFhX_5WVGa95BjDd7Qrv1sODhFBO_LrwAajzvQc"
+  env.SUPABASE_URL,
+  env.SUPABASE_ANON_KEY
 );
 
 // Store a code for an email (expires in 10 minutes)
@@ -58,22 +59,37 @@ export async function verifyCode(email, input) {
  * Store a magic link token (expires in 48h)
  */
 // src/lib/supabase.js
-export async function storeMagicLink(email, token, portalMagic = null, level = null) {
-	const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
-  
-	const { data, error } = await supabase
-	  .from("magic_links")
-	  .insert([{ email, token, portal_magic: portalMagic, level, expires_at: expiresAt.toISOString() }]);
-  
-	if (error) {
-	  console.error("❌ Error storing magic link:", error);
-	  throw error;
-	}
-  
-	console.log(`💾 Stored magic link for ${email} (level: ${level || "unknown"})`);
-	return data;
+export async function storeMagicLink(
+  email,
+  token,
+  portalMagic = null,
+  level = null
+) {
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+
+  const { data, error } = await supabase
+    .from("magic_links")
+    .insert([
+      {
+        email,
+        token,
+        portal_magic: portalMagic,
+        level,
+        expires_at: expiresAt.toISOString(),
+      },
+    ]);
+
+  if (error) {
+    console.error("❌ Error storing magic link:", error);
+    throw error;
   }
-	
+
+  console.log(
+    `💾 Stored magic link for ${email} (level: ${level || "unknown"})`
+  );
+  return data;
+}
+
 /**
  * Verify and consume a magic link token
  */
