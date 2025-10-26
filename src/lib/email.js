@@ -73,7 +73,7 @@ export async function sendMagicLink(email, token, name, portalMagic) {
 
 	const subject = 'Welcome to Expat Spanish Lessons 🎉';
 
-	let body = `
+	const body = `
 ¡Hola ${name}! 👋
 
 Welcome to your Spanish learning journey.
@@ -81,22 +81,9 @@ Welcome to your Spanish learning journey.
 Click below to start your onboarding:
 ${link}
 
-`;
-
-	// Add optional portal link if provided
-	if (portalMagic) {
-		body += `
-You can also access your Student Portal directly here:
-${portalMagic}
-
-`;
-	}
-
-	body += `
 This link will expire in 48 hours.
 
 — The Expat Spanish Lessons Team
 `;
-
 	return await sendEmail(email, subject, body);
 }
