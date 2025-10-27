@@ -52,7 +52,7 @@
             </p>
           </div>
           <a
-            href="https://expatspanishlessons.app.clientclub.net/login"
+            href="https://community.expatspanishlessons.com/courses/library-v2"
             target="_blank"
             rel="noopener noreferrer"
             class="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-3 rounded-md text-xs transition inline-flex items-center justify-center gap-1"
