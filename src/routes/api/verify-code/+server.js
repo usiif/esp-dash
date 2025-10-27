@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { getContactByEmail } from '$lib/ghl.js';
 import { getCalendarLink } from '$lib/calendars.js';
+import { getFlashcardLinks } from '$lib/flashcards.js';
 
 export async function POST({ request, cookies }) {
 	const { email, code } = await request.json();
@@ -9,7 +10,7 @@ export async function POST({ request, cookies }) {
 		return json({ error: 'Missing email or code.' }, { status: 400 });
 	}
 
-	// ✅ Check if the code is valid (you already do this)
+	// ✅ Check if the code is valid (uncomment if you have OTP validation)
 	// const valid = await verifyCode(email, code);
 	// if (!valid) return json({ error: 'Invalid code.' }, { status: 401 });
 
@@ -21,6 +22,9 @@ export async function POST({ request, cookies }) {
 	// ✅ Get their calendar link based on level
 	const calendarLink = getCalendarLink(contact.level);
 
+	
+	const flashcards = getFlashcardLinks(contact.level);
+
 	// ✅ Store everything in the session cookie
 	cookies.set(
 		'user',
@@ -29,12 +33,13 @@ export async function POST({ request, cookies }) {
 			name: contact.firstName,
 			id: contact.id,
 			level: contact.level,
-			calendarLink // 
+			calendarLink,
+			flashcards // ← { share, deck }
 		}),
 		{
 			path: '/',
 			httpOnly: true,
-			maxAge: 60 * 60 * 24 * 14 // 14 days
+			maxAge: 60 * 60 * 24 * 14
 		}
 	);
 
