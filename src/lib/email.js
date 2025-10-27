@@ -66,19 +66,22 @@ export async function sendEmail(to, subject, body) {
 export async function sendMagicLink(email, token, name, portalMagic) {
 	const link = `https://my.expatspanishlessons.com/welcome?token=${token}`;
 
-	const subject = 'Welcome to Expat Spanish Lessons 🎉';
+	const subject = 'Confirm Your Account on Expat Spanish Lessons';
 
 	const body = `
-¡Hola ${name}! 👋
+${name}, ¡Bienvenido/a a Expat Spanish!
 
-Welcome to your Spanish learning journey.
+To get started, we need to confirm your account and set your password. 
 
-Click below to start your onboarding:
+Please click this link below to start your account set up:
 ${link}
 
-This link will expire in 48 hours.
+This link will expire in 48 hours. 
 
-— The Expat Spanish Lessons Team
+If you are unable to access your account or have any problems with logging in, please reply to this email. We monitor the inbox Mon-Saturday 9am-3pm. 
+
+Saludos,
+Expat Spanish 
 `;
 	return await sendEmail(email, subject, body);
 }

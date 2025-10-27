@@ -1,100 +1,139 @@
 <script>
-	import { fade } from 'svelte/transition';
+	import { fade, scale } from 'svelte/transition';
 	export let data;
 
-	let step = 1;
 	let showTutorial = data.user?.onboarding ?? false;
+	let step = 1;
 
-	function nextStep() {
+	async function goToConfirm() {
+		// Open the portal in a new tab first
+		window.open(data.user.portal_magic, '_blank');
+
+		// Wait 2 seconds before moving to confirmation
+		await new Promise((resolve) => setTimeout(resolve, 2000));
 		step = 2;
 	}
 
-	async function dismissTutorial() {
+	async function completeOnboarding() {
 		try {
+			// Small fade delay before disappearing
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			showTutorial = false;
+
+			// Update flag in backend
 			await fetch('/api/onboarding', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ onboarding: false })
 			});
-			showTutorial = false;
-			console.log('✅ Onboarding dismissed');
 		} catch (err) {
 			console.error('❌ Failed to update onboarding:', err);
 		}
 	}
+
+	function retryPortal() {
+		window.open(data.user.portal_magic, '_blank');
+	}
 </script>
 
 {#if showTutorial}
-<div transition:fade class="relative max-w-6xl mx-auto mt-5 mb-3 rounded-xl overflow-hidden shadow-md border border-orange-200">
-  <!-- Background -->
-  <div class="absolute inset-0 pointer-events-none opacity-25">
-    <svg viewBox="0 0 500 150" preserveAspectRatio="none" class="w-full h-full">
-      <defs>
-        <linearGradient id="warmWave" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" style="stop-color:#f97316;stop-opacity:1" />
-          <stop offset="50%" style="stop-color:#fb923c;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#facc15;stop-opacity:0.9" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M0.00,49.98 C150.00,150.00 349.60,-49.98 500.00,49.98 L500.00,150.00 L0.00,150.00 Z"
-        fill="url(#warmWave)" />
-    </svg>
-  </div>
+<!-- Overlay -->
+<div
+	in:fade
+	out:fade
+	class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 flex items-center justify-center px-4"
+>
+	<!-- Card -->
+	<div
+		in:scale
+		out:fade
+		class="relative bg-white rounded-2xl shadow-2xl border border-orange-200 max-w-6xl w-full overflow-hidden z-50"
+	>
+		<!-- Brand Wave -->
+		<div class="absolute inset-0 opacity-25">
+			<svg viewBox="0 0 500 150" preserveAspectRatio="none" class="w-full h-full">
+				<defs>
+					<linearGradient id="onboardWave" x1="0%" y1="0%" x2="100%" y2="0%">
+						<stop offset="0%" style="stop-color:#f97316;stop-opacity:1" />
+						<stop offset="50%" style="stop-color:#fb923c;stop-opacity:1" />
+						<stop offset="100%" style="stop-color:#facc15;stop-opacity:0.9" />
+					</linearGradient>
+				</defs>
+				<path
+					d="M0.00,49.98 C150.00,150.00 349.60,-49.98 500.00,49.98 L500.00,150.00 L0.00,150.00 Z"
+					fill="url(#onboardWave)"
+				/>
+			</svg>
+		</div>
 
-  <!-- Content -->
-  <div class="relative z-10 px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-orange-50/80 backdrop-blur-sm">
-    {#if step === 1}
-      <!-- Step 1 -->
-      <div class="flex items-start gap-3">
-        <div class="flex-shrink-0 mt-0.5">
-          <div class="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm">👋</div>
-        </div>
+		<!-- Content -->
+		<div class="relative z-10 px-8 py-10 flex flex-col items-center text-center space-y-4">
 
-        <div class="space-y-1 max-w-3xl">
-          <h2 class="font-semibold text-sm text-gray-900">Welcome, {data.user.name}!</h2>
-          <p class="text-sm text-gray-700 leading-snug">
-            We’re glad to have you here 🎉  
-            This is your <span class="font-medium text-orange-700">Learning Dashboard</span> — where you’ll find your lessons, live classes, and practice tools all in one place.
-          </p>
-        </div>
-      </div>
+			{#if step === 1}
+			<!-- STEP 1 -->
+			<div class="bg-orange-200 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl shadow">
+				<!-- Key Icon -->
+				<img alt= "Expat Spanish Logo" src="https://storage.googleapis.com/msgsndr/Wpw7KRwapxKDboseXO64/media/68f404461e16747fc6e7b49d.png">
+			</div>
 
-      <button
-        on:click={nextStep}
-        class="mt-4 sm:mt-0 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 px-4 rounded-md transition">
-        Next →
-      </button>
+			<h2 class="text-xl font-semibold text-gray-800">¡Bienvenido/a! 
+        Welcome to your student dashboard.</h2>
+			<p class="text-sm sm:text-base text-gray-700 max-w-2xl leading-relaxed">
+				Before you begin exploring, 
+				<span class="font-semibold text-orange-600">let's set up your password. </span> 
+			</p>
 
-    {:else if step === 2}
-      <!-- Step 2 -->
-      <div class="flex items-start gap-3">
-        <div class="flex-shrink-0 mt-0.5">
-          <div class="bg-orange-400 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm">🧭</div>
-        </div>
+			<button
+				on:click={goToConfirm}
+				class="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-lg text-sm sm:text-base transition-all shadow-md hover:shadow-lg mt-4"
+			>
+				Set My Password →
+			</button>
 
-        <div class="space-y-1 max-w-3xl">
-          <h2 class="font-semibold text-sm text-gray-900">Keep Exploring</h2>
-          <p class="text-sm text-gray-700 leading-snug">
-            You can always keep learning by clicking 
-            <span class="font-medium text-orange-700">“Start a Lesson Now”</span> — or revisit anytime through your portal:
-            <a
-              href={data.user.portal_magic}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="ml-1 text-orange-700 hover:underline font-medium">
-              Open Portal →
-            </a>
-          </p>
-        </div>
-      </div>
+			<p class="text-xs text-gray-500 mt-2">
+				This ensures your account is fully ready to access the learning materials.
+			</p>
 
-      <button
-        on:click={dismissTutorial}
-        class="mt-4 sm:mt-0 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 px-4 rounded-md transition">
-        Got it!
-      </button>
-    {/if}
-  </div>
+			{:else if step === 2}
+			<!-- STEP 2 -->
+			<div class="bg-orange-500 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl shadow">
+				<!-- Check Icon -->
+				<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+				</svg>
+			</div>
+
+			<h2 class="text-xl font-semibold text-gray-800">Were you able to log in?</h2>
+			<p class="text-sm sm:text-base text-gray-700 max-w-2xl leading-relaxed">
+				If everything went well, you’re ready to start learning!
+				If not, you can try again or reach out for help.
+			</p>
+
+			<div class="flex flex-col sm:flex-row gap-3 mt-5">
+				<button
+					on:click={completeOnboarding}
+					class="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 px-6 rounded-lg text-sm transition"
+				>
+					Yes, Let's Go →
+				</button>
+
+				<button
+					on:click={retryPortal}
+					class="cursor-pointer bg-white border border-orange-400 text-orange-600 hover:bg-orange-50 font-medium py-2.5 px-6 rounded-lg text-sm transition"
+				>
+					Let's Try Again
+				</button>
+			</div>
+
+			<p class="text-xs text-gray-500 mt-3">
+				If you need help, email us at
+				<a href="mailto:contact@expatspanishlessons.com" class="text-orange-600 font-medium hover:underline">
+					contact@expatspanishlessons.com
+				</a>.
+			</p>
+
+			{/if}
+		</div>
+	</div>
 </div>
 {/if}

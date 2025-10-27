@@ -28,17 +28,19 @@ export async function POST({ request }) {
 		await storeCode(email, code);
 
 		// 5️⃣ Compose and send the email
-		const subject = 'Your Verification Code';
+		const subject = 'Verify Your Account ';
 		const body = `
-Hola ${contact.firstName || ''} 👋,
+Hola ${contact.firstName || ''},
 
-Your Spanish Journey login code is:
+To access your student dashboard: 
+1. Copy this code: ${code}
+2. Return to this page to enter your code
 
-👉 ${code}
+This link will expire in 30 minutes. 
 
-It expires in 10 minutes.
+If you are unable to access your account or have any problems with logging in, please reply to this email. We monitor the inbox Mon-Saturday 9am-3pm. 
 
-¡Vamos!
+- Expat Spanish
 		`;
 
 		const sent = await sendEmail(email, subject, body);

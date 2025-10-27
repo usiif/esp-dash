@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { supabase } from '$lib/supabase.js';
 import { getContactByEmail } from '$lib/ghl.js';
 import { getCalendarLink } from '$lib/calendars.js';
+import { getFlashcardLinks } from '$lib/flashcards.js';
 
 export async function GET({ url, cookies }) {
 	const token = url.searchParams.get('token');
@@ -40,12 +41,11 @@ export async function GET({ url, cookies }) {
 			throw redirect(302, '/');
 		}
 
-		// 4️⃣ Get the calendar link from level
+		// 4️⃣ Get resources based on their level
 		const calendarLink = getCalendarLink(contact.level);
+		const flashcards = getFlashcardLinks(contact.level);
 
-		console.log(
-			`📧 User verified: ${contact.firstName} (${contact.level || 'N/A'})`
-		);
+		console.log(`📧 User verified: ${contact.firstName} (${contact.level || 'N/A'})`);
 
 		// 5️⃣ Create session cookie
 		cookies.set(
@@ -56,8 +56,9 @@ export async function GET({ url, cookies }) {
 				id: contact.id,
 				level: contact.level,
 				calendarLink,
+				flashcards, // 🧠 Added Flashcards here
 				portal_magic: data.portal_magic || null,
-				onboarding: true // first-time flag
+				onboarding: true // 🧭 Flag for first-time tutorial
 			}),
 			{
 				path: '/',

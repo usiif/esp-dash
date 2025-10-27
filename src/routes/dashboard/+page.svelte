@@ -3,26 +3,11 @@
 </svelte:head>
 
 <script>
-  	import { onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import Onboarding from '$lib/components/onboarding.svelte'
  
   export let data;
-
-  onMount(() => {
-		// Prevent multiple script injections on client navigation
-		if (document.getElementById('leadconnector-chat-widget')) return;
-
-		const script = document.createElement('script');
-		script.src = 'https://widgets.leadconnectorhq.com/loader.js';
-		script.dataset.resourcesUrl = 'https://widgets.leadconnectorhq.com/chat-widget/loader.js';
-		script.dataset.widgetId = '68fe0a70bb21f16ca0a3bafe';
-		script.id = 'leadconnector-chat-widget';
-		document.body.appendChild(script);
-
-		console.log('💬 LeadConnector chat widget loaded');
-	});
-
 </script>
 
 
@@ -104,25 +89,46 @@
         </div>
 
         <!-- Flashcards -->
-        <div class="bg-white p-4 rounded-lg border border-orange-100 shadow-sm text-center flex flex-col justify-between">
-          <div>
-            <div class="flex justify-center mb-2">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="#ea580c" class="w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
-              </svg>
-            </div>
-            <h3 class="text-sm font-semibold text-gray-800 mb-2 pb-2 border-b border-orange-100">My Flashcards</h3>
-            <p class="text-xs text-gray-600 mb-3 mx-auto max-w-[220px] leading-snug">Review the vocabulary from your course to keep it fresh.</p>
-          </div>
-          <a
-            href="https://expatspanishlessons.app.clientclub.net/login"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-3 rounded-md text-xs transition"
-          >
-            Go to Brainscape
-          </a>
-        </div>
+        <!-- Flashcards -->
+<div class="bg-white p-4 rounded-lg border border-orange-100 shadow-sm text-center flex flex-col justify-between">
+  <div>
+    <div class="flex justify-center mb-2">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="#ea580c" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+      </svg>
+    </div>
+    <h3 class="text-sm font-semibold text-gray-800 mb-2 pb-2 border-b border-orange-100">My Flashcards</h3>
+    <p class="text-xs text-gray-600 mb-3 mx-auto max-w-[230px] leading-snug">
+      To add flashcards to your Brainscape account 
+            {#if data.user.flashcards?.share}
+        <a
+          href={data.user.flashcards.share}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-orange-600 hover:text-orange-700 font-medium underline"
+        >
+         click here
+        </a>
+      {:else}
+        <span class="text-gray-500 italic">shared flashcards</span>
+      {/if}.
+    </p>
+  </div>
+
+  {#if data.user.flashcards?.deck}
+    <a
+      href={data.user.flashcards.deck}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-3 rounded-md text-xs transition inline-flex items-center justify-center gap-1"
+    >
+      Go to Brainscape
+    </a>
+  {:else}
+    <p class="text-xs text-gray-500 italic">Flashcards unavailable for your level.</p>
+  {/if}
+</div>
+
       </div>
     </div>
 
