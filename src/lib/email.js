@@ -19,7 +19,8 @@ export function generateCode() {
  */
 export async function sendEmail(to, subject, body) {
 	const apiKey = env.SMTP2GO_API_KEY;
-	const sender = env.SMTP2GO_SENDER;  
+	const sender = env.SMTP2GO_SENDER;
+	const replyto = "contact@expatspanishlessons.com"
 
 	if (!apiKey || !sender) {
 		console.error('❌ SMTP2GO not configured: missing API key or sender.');
@@ -37,7 +38,13 @@ export async function sendEmail(to, subject, body) {
 				sender,
 				to: [to],
 				subject,
-				text_body: body
+				text_body: body,
+				custom_headers: [
+					{
+						header: 'Reply-To',
+						value: replyto
+					}
+				]
 			})
 		});
 
