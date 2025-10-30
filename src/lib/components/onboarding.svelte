@@ -2,33 +2,36 @@
 	import { fade, scale } from 'svelte/transition';
 	export let data;
 
-	let showTutorial = data.user?.onboarding ?? false;
-	let step = 1;
+	let showTutorial = data.user?.onboarding && data.user.onboarding !== 'complete';
+	let step = data.user?.onboarding === 'password_set' ? 2 : 1;
 
-	async function goToConfirm() {
-		// Open the portal in a new tab first
-		window.open(data.user.portal_magic, '_blank');
-
-		// Wait 2 seconds before moving to confirmation
-		await new Promise((resolve) => setTimeout(resolve, 2000));
-		step = 2;
-	}
-
-	async function completeOnboarding() {
+	// ✅ Update onboarding state in session
+	async function updateOnboarding(state) {
 		try {
-			// Small fade delay before disappearing
-			await new Promise((resolve) => setTimeout(resolve, 300));
-			showTutorial = false;
-
-			// Update flag in backend
 			await fetch('/api/onboarding', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ onboarding: false })
+				body: JSON.stringify({ onboarding: state })
 			});
+			console.log(`✅ Onboarding updated to: ${state}`);
 		} catch (err) {
 			console.error('❌ Failed to update onboarding:', err);
 		}
+	}
+
+	// ✅ Step 1: open portal and mark as "password_set"
+	async function goToConfirm() {
+		window.open(data.user.portal_magic, '_blank');
+		await new Promise((resolve) => setTimeout(resolve, 2000)); // 2s delay
+		await updateOnboarding('password_set');
+		step = 2;
+	}
+
+	// ✅ Step 2: mark complete and hide
+	async function completeOnboarding() {
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		showTutorial = false;
+		await updateOnboarding('complete');
 	}
 
 	function retryPortal() {
@@ -72,15 +75,13 @@
 			{#if step === 1}
 			<!-- STEP 1 -->
 			<div class="bg-orange-200 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl shadow">
-				<!-- Key Icon -->
-				<img alt= "Expat Spanish Logo" src="https://storage.googleapis.com/msgsndr/Wpw7KRwapxKDboseXO64/media/68f404461e16747fc6e7b49d.png">
+				<img alt="Expat Spanish Logo" src="https://storage.googleapis.com/msgsndr/Wpw7KRwapxKDboseXO64/media/68f404461e16747fc6e7b49d.png" class="w-8 h-8">
 			</div>
 
-			<h2 class="text-xl font-semibold text-gray-800">¡Bienvenido/a! 
-        Welcome to your student dashboard.</h2>
+			<h2 class="text-xl font-semibold text-gray-800">¡Bienvenido/a! Welcome to your student dashboard.</h2>
 			<p class="text-sm sm:text-base text-gray-700 max-w-2xl leading-relaxed">
 				Before you begin exploring, 
-				<span class="font-semibold text-orange-600">let's set up your password. </span> 
+				<span class="font-semibold text-orange-600">let's set up your password.</span>
 			</p>
 
 			<button

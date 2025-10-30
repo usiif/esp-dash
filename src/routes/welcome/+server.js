@@ -58,7 +58,7 @@ export async function GET({ url, cookies }) {
 				calendarLink,
 				flashcards, // 🧠 Added Flashcards here
 				portal_magic: data.portal_magic || null,
-				onboarding: true // 🧭 Flag for first-time tutorial
+				onboarding: 'intro' // 🧭 Flag for first-time tutorial
 			}),
 			{
 				path: '/',

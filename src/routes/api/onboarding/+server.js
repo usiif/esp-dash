@@ -1,32 +1,27 @@
 // src/routes/api/onboarding/+server.js
 import { json } from '@sveltejs/kit';
 
-/**
- * Simple endpoint to update the onboarding flag in session cookie.
- */
 export async function POST({ request, cookies }) {
-	try {
-		const { onboarding } = await request.json();
-		const userCookie = cookies.get('user');
+  try {
+    const { onboarding } = await request.json(); // e.g. "password_set" or "complete"
+    if (!onboarding) return json({ error: 'Missing onboarding state' }, { status: 400 });
 
-		if (!userCookie) {
-			console.warn('⚠️ Tried to update onboarding with no session.');
-			return json({ error: 'No active session' }, { status: 401 });
-		}
+    const session = cookies.get('user');
+    if (!session) return json({ error: 'No session found' }, { status: 401 });
 
-		const user = JSON.parse(userCookie);
-		user.onboarding = onboarding ?? false;
+    const user = JSON.parse(session);
+    user.onboarding = onboarding;
 
-		cookies.set('user', JSON.stringify(user), {
-			path: '/',
-			httpOnly: true,
-			maxAge: 60 * 60 * 24 * 14 // 14 days
-		});
+    cookies.set('user', JSON.stringify(user), {
+      path: '/',
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 14
+    });
 
-		console.log(`✅ Updated onboarding to ${user.onboarding} for ${user.email}`);
-		return json({ success: true });
-	} catch (err) {
-		console.error('❌ Error updating onboarding flag:', err);
-		return json({ error: 'Failed to update onboarding flag' }, { status: 500 });
-	}
+    console.log(`✅ Onboarding state updated to "${onboarding}"`);
+    return json({ success: true });
+  } catch (err) {
+    console.error('❌ Failed to update onboarding:', err);
+    return json({ error: 'Server error' }, { status: 500 });
+  }
 }
