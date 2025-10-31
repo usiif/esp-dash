@@ -1,14 +1,16 @@
 <script>
+    export let data;
+	const user = data.user;
+
 	import { onMount, afterUpdate } from "svelte";
 
 	let messages = [];
 	let input = "";
-	let mode = null;
+	let mode = "";
 	let sessionId = null;
 	let loading = false;
 	let chatRef;
 
-    export let data;
 	// ADD YOUR IMG LINKS HERE ✅
 	const botAvatar = "https://storage.googleapis.com/msgsndr/Wpw7KRwapxKDboseXO64/media/68f404461e16747fc6e7b49d.png";
 	const userAvatar = "https://storage.googleapis.com/msgsndr/Wpw7KRwapxKDboseXO64/media/68f404461e16747fc6e7b49d.png";
@@ -39,7 +41,9 @@
 			body: JSON.stringify({
 				message: userText,
 				sessionId,
-				mode
+				mode,
+                name: user.name,
+                email: user.email
 			})
 		});
 

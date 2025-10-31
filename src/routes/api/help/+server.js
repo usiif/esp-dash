@@ -5,12 +5,13 @@ import { env } from '$env/dynamic/private';
 const URL = env.N8N_WEBHOOK_URL;
 
 
+
 export async function POST({ request }) {
 	try {
-		const { message, sessionId, mode } = await request.json();
+		const { message, sessionId, mode , name, email} = await request.json();
 
-		if (!message || !sessionId || !mode) {
-			console.error("[HELP API] Missing fields", { message, sessionId, mode });
+		if (!message || !sessionId ) {
+			console.error("[HELP API] Missing fields", { message, sessionId, mode , name, email});
 			return json({ error: "Missing fields" }, { status: 400 });
 		}
 
@@ -18,7 +19,9 @@ export async function POST({ request }) {
 			{
 				chatInput: message,
 				sessionId,
-				mode
+				mode,
+                name,
+                email
 			}
 		];
 
