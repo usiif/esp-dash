@@ -122,17 +122,15 @@ export async function getUpcomingAppointments(contactID, tz) {
 			});
 
 			upcoming.push({
-				title: e.title || 'Session',
-				startTime: formattedStart,
-				startDate: start,
-				endDate: end,
-				status: uiStatus,   // ✅ NEW
-				address: e.address || 'No link',
+				title: e.title || "Session",
+				startRaw: start.toISOString(),   // ✅ UTC
+				endRaw: end.toISOString(),       // ✅ UTC
+				address: e.address || "No link",
 				cancelLink: `https://api.leadconnectorhq.com/widget/cancel-booking?event_id=${e.id}`,
-				teacher: e.assignedUserId || 'TBD',
-				calendarTZ: "America/Chicago",
-				localTZ: tz || userTZ
-			});
+				teacher: e.assignedUserId || "TBD",
+				status: uiStatus
+			  });
+			  
 		}
 
 		console.log(`✅ Showing ${upcoming.length} appointment(s)`);

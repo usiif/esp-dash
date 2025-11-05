@@ -4,6 +4,20 @@
   import Onboarding from "$lib/components/onboarding.svelte";
 
   export let data;
+
+  const tz = data.user.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  function formatLocal(dateStr) {
+    return new Date(dateStr).toLocaleString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: tz
+    });
+  }
+
 </script>
 
 <svelte:head>
@@ -240,7 +254,10 @@
               </span>
             </div>
           
-            <p class="text-xs text-gray-500 mt-0.5">{a.startTime} ({a.localTZ})</p>
+            <p class="text-xs text-gray-500">
+              {formatLocal(a.startRaw)} ({tz})
+            </p>
+            
           
             <div class="flex gap-3 mt-2 text-xs items-center">
               <a
