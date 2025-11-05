@@ -48,7 +48,8 @@ export async function getContactByEmail(email) {
 		return null; e
 	}
 }
-export async function getUpcomingAppointments(contactID) {
+export async function getUpcomingAppointments(contactID, tz) {
+	{
 	if (!contactID) {
 		console.error('❌ getUpcomingAppointments called without contact ID');
 		return [];
@@ -130,7 +131,7 @@ export async function getUpcomingAppointments(contactID) {
 				cancelLink: `https://api.leadconnectorhq.com/widget/cancel-booking?event_id=${e.id}`,
 				teacher: e.assignedUserId || 'TBD',
 				calendarTZ: "America/Chicago",
-				localTZ: userTZ
+				localTZ: tz || userTZ
 			});
 		}
 
@@ -142,7 +143,7 @@ export async function getUpcomingAppointments(contactID) {
 		return [];
 	}
 }
-
+}
 
 
 // Parse GHL time as CST and convert to local Date
