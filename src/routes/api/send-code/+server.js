@@ -18,7 +18,7 @@ export async function POST({ request }) {
 
 		if (!contact || !contact.id) {
 			console.warn(`⚠️ Blocked email attempt - not in CRM: ${email}`);
-			return json({ error: "You're not in our CRM brother 😅" }, { status: 404 });
+			return json({ error: "Amigo/a that email is not in our system." }, { status: 404 });
 		}
 
 		// 3️⃣ Generate a 6-digit verification code
