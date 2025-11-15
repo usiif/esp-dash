@@ -130,7 +130,7 @@
             <p
               class="text-xs text-gray-600 mb-3 mx-auto max-w-[220px] leading-snug"
             >
-              See your level’s calendar and schedule.
+              See {data.user.level} calendar and schedule.
             </p>
           </div>
           {#if data?.calendarLink}
@@ -176,19 +176,11 @@
               My Flashcards
             </h3>
 
-            {#if data.user.level === "Level 4" || data.user.level === "Level 5" || data.user.level === "Level 6"}
-              <!-- Coming soon notice -->
+           
               <p
                 class="text-xs text-gray-600 mb-3 mx-auto max-w-[230px] leading-snug"
               >
-                Flashcards are being updated .. link coming soon
-              </p>
-            {:else}
-              <!-- Normal text w/ share link -->
-              <p
-                class="text-xs text-gray-600 mb-3 mx-auto max-w-[230px] leading-snug"
-              >
-                To add flashcards to your Brainscape account
+               To activate your flashcards for the {data.user.level} Course 
                 {#if data.user.flashcards?.share}
                   <a
                     href={data.user.flashcards.share}
@@ -202,11 +194,11 @@
                   <span class="text-gray-500 italic">shared flashcards</span>
                 {/if}.
               </p>
-            {/if}
+          
           </div>
 
           <!-- Button only for Levels 1–3 -->
-          {#if data.user.level === "Level 1" || data.user.level === "Level 2" || data.user.level === "Level 3"}
+          {#if data.user.level === "Level 1" || data.user.level === "Level 2" || data.user.level === "Level 3" || data.user.level === "Level 4"}
             {#if data.user.flashcards?.deck}
               <a
                 href={data.user.flashcards.deck}
