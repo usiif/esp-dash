@@ -1,76 +1,83 @@
+// src/routes/welcome/+server.js
 import { redirect } from '@sveltejs/kit';
-import { supabase } from '$lib/supabase.js';
-import { getContactByEmail } from '$lib/ghl.js';
+import { verifyMagicLink, getStudentByEmail, createSession } from '$lib/supabase.js';
 import { getCalendarLink } from '$lib/calendars.js';
 import { getFlashcardLinks } from '$lib/flashcards.js';
 
 export async function GET({ url, cookies }) {
-	const token = url.searchParams.get('token');
-	if (!token) {
-		console.warn('⚠️ Missing token in /welcome request');
-		throw redirect(302, '/');
-	}
+  const token = url.searchParams.get('token');
 
-	console.log(`🔑 Verifying magic token: ${token}`);
+  console.log('[welcome] Incoming request');
 
-	try {
-		// 1️⃣ Look up the token in Supabase
-		const { data, error } = await supabase
-			.from('magic_links')
-			.select('*')
-			.eq('token', token)
-			.single();
+  if (!token) {
+    console.warn('[welcome] Missing token');
+    throw redirect(302, '/');
+  }
 
-		if (error || !data) {
-			console.error('❌ Invalid or missing token:', error || 'No record found.');
-			throw redirect(302, '/');
-		}
+  console.log('[welcome] Token received:', token.slice(0, 6) + '...');
 
-		// 2️⃣ Check expiration
-		const now = new Date();
-		const expiresAt = new Date(data.expires_at);
-		if (expiresAt < now) {
-			console.warn(`⏰ Token expired for ${data.email}`);
-			throw redirect(302, '/');
-		}
+  // 1) Verify & consume magic token
+  const verified = await verifyMagicLink(token);
+  if (!verified || !verified.email) {
+    console.warn('[welcome] Token invalid or not associated with an email');
+    throw redirect(302, '/');
+  }
 
-		// 3️⃣ Fetch user details from GHL
-		const contact = await getContactByEmail(data.email);
-		if (!contact) {
-			console.warn(`❌ Contact not found in GHL for ${data.email}`);
-			throw redirect(302, '/');
-		}
+  console.log('[welcome] Token verified for:', verified.email);
 
-		// 4️⃣ Get resources based on their level
-		const calendarLink = getCalendarLink(contact.level);
-		const flashcards = getFlashcardLinks(contact.level);
+  // 2) Fetch student from Supabase
+  const student = await getStudentByEmail(verified.email);
+  if (!student) {
+    console.warn('[welcome] Student not found in Supabase:', verified.email);
+    throw redirect(302, '/');
+  }
 
-		console.log(`📧 User verified: ${contact.firstName} (${contact.level || 'N/A'})`);
+  console.log('[welcome] Student loaded:', {
+    id: student.id,
+    email: student.email,
+    name: student.full_name
+  });
 
-		// 5️⃣ Create session cookie
-		cookies.set(
-			'user',
-			JSON.stringify({
-				email: contact.email,
-				name: contact.firstName,
-				id: contact.id,
-				level: contact.level,
-				calendarLink,
-				flashcards, // 🧠 Added Flashcards here
-				portal_magic: data.portal_magic || null,
-				onboarding: 'intro' // 🧭 Flag for first-time tutorial
-			}),
-			{
-				path: '/',
-				httpOnly: true,
-				maxAge: 60 * 60 * 24 * 14 // 14 days
-			}
-		);
+  // 3) Optional resources — for logs / sanity checks only
+  const level = student.level_key || null;
+  const calendarLink = level ? getCalendarLink(level) : null;
+  const flashcards = level ? getFlashcardLinks(level) : null;
 
-		console.log(`✅ Session created for ${contact.email}`);
-		throw redirect(302, '/dashboard');
-	} catch (err) {
-		console.error('🔥 Error in /welcome handler:', err);
-		throw redirect(302, '/');
-	}
+  console.log('[welcome] Level & resources resolved:', {
+    level,
+    hasCalendar: !!calendarLink,
+    hasFlashcards: !!flashcards,
+    flashcards_deck: flashcards?.deck || null
+  });
+
+  // 4) Create (upsert) a session in DB (single-session behavior)
+  const session = await createSession({
+    student_id: student.id,
+    first_name: student.first_name || student.full_name,
+    level_key: student.level_key,
+    ghl_contact_id: student.ghl_contact_id
+  });
+
+  if (!session || !session.id) {
+    console.error('[welcome] Failed to create session for student:', student.id);
+    throw redirect(302, '/');
+  }
+
+  // 5) Set httpOnly session cookie (store only the session id)
+  cookies.set('session_id', session.id, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 14 // 14 days
+  });
+
+  console.log('[welcome] Session created and cookie set:', {
+    student_id: student.id,
+    session_id: session.id
+  });
+
+  // 6) Redirect to dashboard
+  console.log('[welcome] Redirect → /dashboard');
+  throw redirect(302, '/dashboard');
 }

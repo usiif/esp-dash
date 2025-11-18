@@ -1,27 +1,50 @@
 // src/routes/api/onboarding/+server.js
 import { json } from '@sveltejs/kit';
+import { getSessionById, supabase, refreshSessionForStudent } from '$lib/supabase.js';
 
 export async function POST({ request, cookies }) {
   try {
-    const { onboarding } = await request.json(); // e.g. "password_set" or "complete"
+    const { onboarding } = await request.json(); // expected: 'password_set' | 'complete' etc.
     if (!onboarding) return json({ error: 'Missing onboarding state' }, { status: 400 });
 
-    const session = cookies.get('user');
-    if (!session) return json({ error: 'No session found' }, { status: 401 });
+    // read session_id cookie (session-based flow)
+    const sessionId = cookies.get('session_id');
+    if (!sessionId) return json({ error: 'No session (not authenticated)' }, { status: 401 });
 
-    const user = JSON.parse(session);
-    user.onboarding = onboarding;
+    // get session row to discover student_id
+    const session = await getSessionById(sessionId);
+    if (!session || !session.student_id) {
+      // clear cookie on broken session
+      cookies.delete('session_id', { path: '/' });
+      return json({ error: 'Invalid session' }, { status: 401 });
+    }
 
-    cookies.set('user', JSON.stringify(user), {
-      path: '/',
-      httpOnly: true,
-      maxAge: 60 * 60 * 24 * 14
-    });
+    const studentId = session.student_id;
 
-    console.log(`✅ Onboarding state updated to "${onboarding}"`);
-    return json({ success: true });
+    // update students table
+    const { data, error } = await supabase
+      .from('students')
+      .update({ onboarding_status: onboarding, updated_at: new Date().toISOString() })
+      .eq('id', studentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[onboarding] failed to update student:', error);
+      return json({ error: 'Failed to update onboarding' }, { status: 500 });
+    }
+
+    // refresh session rows so computed fields (flashcards_deck etc.) reflect new level/status
+    try {
+      await refreshSessionForStudent(studentId);
+    } catch (err) {
+      console.warn('[onboarding] refreshSessionForStudent failed:', err);
+      // don't fail the operation if this refresh fails
+    }
+
+    return json({ success: true, onboarding, student: data });
   } catch (err) {
-    console.error('❌ Failed to update onboarding:', err);
+    console.error('[onboarding] error:', err);
     return json({ error: 'Server error' }, { status: 500 });
   }
 }
