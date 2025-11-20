@@ -23,7 +23,7 @@ export async function load({ url }) {
     // 2) fetch page rows using range for consistent pagination
     const { data, error } = await supabase
       .from('students')
-      .select('full_name, first_name, last_name, email, level_key, onboarding_status, tz, profile_pic')
+      .select('id, full_name, first_name, last_name, email, level_key, onboarding_status, tz, profile_pic')
       .order('full_name', { ascending: true })
       .range(start, end);
 
@@ -33,6 +33,7 @@ export async function load({ url }) {
     }
 
     const students = (data || []).map((s) => ({
+      id: s.id,
       full_name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || '—',
       email: s.email || '—',
       level_key: s.level_key || '—',

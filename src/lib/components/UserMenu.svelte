@@ -78,7 +78,7 @@
   <div class="user-menu-root relative" aria-haspopup="true" aria-expanded={open}>
     <button
       type="button"
-      class="flex items-center gap-2 focus:outline-none cursor-pointer"
+      class="flex items-center gap-2 w-full focus:outline-none cursor-pointer hover:bg-gray-50 rounded-md p-2 transition-colors"
       on:click={() => (open = !open)}
       aria-label="Open user menu"
     >
@@ -92,16 +92,20 @@
       {:else}
         <div class="avatar-initial" aria-hidden="true">{initial}</div>
       {/if}
-  
-      <!-- small gray arrow -->
-      <svg class="w-4 h-4 text-gray-400 -mr-1" viewBox="0 0 20 20" fill="none">
+
+      <div class="flex-1 text-left">
+        <p class="text-sm font-medium text-gray-900">{displayName}</p>
+      </div>
+
+      <!-- small gray arrow (pointing up when open) -->
+      <svg class="w-4 h-4 text-gray-400 transition-transform" class:rotate-180={open} viewBox="0 0 20 20" fill="none">
         <path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </button>
-  
+
     {#if open}
       <div
-        class="absolute right-0 mt-2 z-50"
+        class="absolute left-0 right-0 bottom-full mb-2 z-50"
         transition:fade={{ duration: 120 }}
       >
         <div class="menu-card" role="menu" aria-orientation="vertical">

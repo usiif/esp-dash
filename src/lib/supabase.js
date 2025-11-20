@@ -326,15 +326,18 @@ export async function getEnrollmentsByStudent(studentId) {
       class_id,
       status,
       enrolled_at,
+      attendance_status,
       classes (
         id,
         title,
         description,
+        notes,
         starts_at,
         duration_minutes,
         capacity,
         levels,
         zoom_link,
+        recording_link,
         teacher:team(id, full_name, email)
       )
     `)
