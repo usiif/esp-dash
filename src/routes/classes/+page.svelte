@@ -18,6 +18,13 @@
   // Create a map of class_id to enrollment info
   $: enrollmentMap = new Map((data.myClasses || []).map(e => [e.class_id, e]));
 
+  // Prep status: enrollment_id -> Set of completed prep_item_ids
+  // Convert arrays from server to Sets for easier lookups
+  $: prepStatus = Object.entries(data.prepStatus || {}).reduce((acc, [enrollmentId, itemIds]) => {
+    acc[enrollmentId] = new Set(itemIds);
+    return acc;
+  }, {});
+
   // Generate calendar for 4 weeks (current week + 3 more weeks)
   const today = new Date();
 
@@ -130,6 +137,54 @@
   }
 
   let cancellingEnrollmentId = null;
+
+  async function togglePrepItem(enrollmentId, prepItemId, isDone) {
+    try {
+      const response = await fetch('/api/prep-status/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollment_id: enrollmentId,
+          prep_item_id: prepItemId,
+          is_done: isDone
+        })
+      });
+
+      if (!response.ok) {
+        toastMessage = 'Failed to update prep item';
+        toastType = 'error';
+        showToast = true;
+        setTimeout(() => showToast = false, 3000);
+        return;
+      }
+
+      // Update local state by creating a new object and Set to trigger reactivity
+      const newPrepStatus = {};
+
+      // Deep copy existing Sets
+      for (const [key, value] of Object.entries(prepStatus)) {
+        newPrepStatus[key] = new Set(value);
+      }
+
+      if (!newPrepStatus[enrollmentId]) {
+        newPrepStatus[enrollmentId] = new Set();
+      }
+
+      if (isDone) {
+        newPrepStatus[enrollmentId].add(prepItemId);
+      } else {
+        newPrepStatus[enrollmentId].delete(prepItemId);
+      }
+
+      prepStatus = newPrepStatus; // Assign new object to trigger reactivity
+    } catch (err) {
+      console.error('Error toggling prep item:', err);
+      toastMessage = 'Failed to update prep item';
+      toastType = 'error';
+      showToast = true;
+      setTimeout(() => showToast = false, 3000);
+    }
+  }
 
   async function cancelEnrollment(enrollmentId, classId) {
     if (cancellingEnrollmentId === enrollmentId) return;
@@ -310,6 +365,22 @@
         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-2 flex-1">
             <h3 class="text-lg font-bold text-gray-900">{selectedClass.title}</h3>
+
+            <!-- Description tooltip icon -->
+            {#if selectedClass.description}
+              <div class="relative group">
+                <button class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+                <div class="hidden group-hover:block absolute z-10 top-full left-0 mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg max-w-xs w-64">
+                  {selectedClass.description}
+                  <div class="absolute bottom-full left-4 w-2 h-2 bg-gray-900 transform rotate-45 mb-1"></div>
+                </div>
+              </div>
+            {/if}
+
             {#if enrolledClassIds.has(selectedClass.id)}
               <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded flex items-center gap-1">
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -331,60 +402,103 @@
 
         <!-- Modal Content -->
         <div class="px-6 py-4 space-y-4">
-          <!-- Date & Time -->
-          <div>
-            <p class="text-sm font-semibold text-gray-700 mb-1">Date & Time</p>
-            <p class="text-base text-orange-600 font-medium">{formatDate(selectedClass.start)}</p>
-            <p class="text-sm text-gray-600">at {formatTime(selectedClass.start)}</p>
-          </div>
-
-          <!-- Teacher -->
-          {#if selectedClass.teacher}
+          <!-- Topic (if available) -->
+          {#if selectedClass.topic}
             <div>
-              <p class="text-sm font-semibold text-gray-700 mb-1">Teacher</p>
-              <p class="text-base text-gray-900">{selectedClass.teacher}</p>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Topic</p>
+              <p class="text-base font-medium text-gray-900">{selectedClass.topic}</p>
             </div>
           {/if}
 
-          <!-- Duration & Capacity -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-sm font-semibold text-gray-700 mb-1">Duration</p>
-              <p class="text-base text-gray-900">{selectedClass.duration_minutes} minutes</p>
+          <!-- Class details stacked vertically -->
+          <div class="space-y-2 text-sm text-gray-600">
+            <div class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{formatDate(selectedClass.start)}</span>
             </div>
-            {#if selectedClass.capacity}
-              <div>
-                <p class="text-sm font-semibold text-gray-700 mb-1">Capacity</p>
-                <p class="text-base text-gray-900">{selectedClass.capacity} students</p>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{formatTime(selectedClass.start)} • {selectedClass.duration_minutes} min</span>
+            </div>
+            {#if selectedClass.teacher}
+              <div class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span>{selectedClass.teacher}</span>
               </div>
             {/if}
+            <div class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span class={selectedClass.available_spaces === 0 ? 'text-red-600 font-medium' : ''}>
+                {selectedClass.available_spaces} {selectedClass.available_spaces === 1 ? 'space' : 'spaces'} left
+              </span>
+            </div>
           </div>
-
-          <!-- Levels -->
-          {#if selectedClass.levels && selectedClass.levels.length > 0}
-            <div>
-              <p class="text-sm font-semibold text-gray-700 mb-1">Levels</p>
-              <div class="flex flex-wrap gap-2">
-                {#each selectedClass.levels as level}
-                  <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">{level}</span>
-                {/each}
-              </div>
-            </div>
-          {/if}
-
-          <!-- Description -->
-          {#if selectedClass.description}
-            <div>
-              <p class="text-sm font-semibold text-gray-700 mb-1">Description</p>
-              <p class="text-sm text-gray-600">{selectedClass.description}</p>
-            </div>
-          {/if}
 
           <!-- Notes -->
           {#if selectedClass.notes}
             <div>
               <p class="text-sm font-semibold text-gray-700 mb-1">Notes</p>
               <p class="text-sm text-gray-600">{selectedClass.notes}</p>
+            </div>
+          {/if}
+
+          <!-- Prep Items -->
+          {#if selectedClass.prep_items && selectedClass.prep_items.length > 0}
+            <div class="border-t border-gray-200 pt-4 mt-4">
+              <p class="text-sm font-semibold text-gray-700 mb-3">Class Preparation</p>
+              <div class="space-y-2">
+                {#each selectedClass.prep_items as prepItem}
+                  {@const enrollment = enrollmentMap.get(selectedClass.id)}
+                  {@const completedItems = enrollment ? (prepStatus[enrollment.enrollment_id] || new Set()) : new Set()}
+                  {@const isCompleted = completedItems.has(prepItem.id)}
+
+                  <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                    <div class="flex items-center gap-2">
+                      <!-- Checkbox (only for enrolled students) -->
+                      {#if enrolledClassIds.has(selectedClass.id)}
+                        <input
+                          type="checkbox"
+                          checked={isCompleted}
+                          on:change={(e) => togglePrepItem(enrollment.enrollment_id, prepItem.id, e.target.checked)}
+                          class="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 flex-shrink-0"
+                        />
+                      {/if}
+
+                      <div class="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                        <span class="text-sm font-medium text-gray-900">{prepItem.title}</span>
+                        {#if prepItem.is_required}
+                          <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded font-medium flex-shrink-0">Required</span>
+                        {/if}
+                        {#if prepItem.kind}
+                          <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded capitalize flex-shrink-0">{prepItem.kind}</span>
+                        {/if}
+                        {#if prepItem.url}
+                          <a
+                            href={prepItem.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 flex-shrink-0"
+                            title={prepItem.description || 'Open resource'}
+                          >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            <span>Open link</span>
+                          </a>
+                        {/if}
+                      </div>
+                    </div>
+                  </div>
+                {/each}
+              </div>
             </div>
           {/if}
         </div>

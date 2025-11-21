@@ -20,6 +20,7 @@ export async function POST({ request, cookies }) {
       id,
       title,
       description,
+      topic,
       start, // ISO string
       duration_minutes,
       teacher_id,
@@ -41,6 +42,7 @@ export async function POST({ request, cookies }) {
 
     if (title !== undefined) updates.title = title;
     if (description !== undefined) updates.description = description;
+    if (topic !== undefined) updates.topic = topic;
     if (start !== undefined) updates.starts_at = start;
     if (duration_minutes !== undefined) updates.duration_minutes = duration_minutes;
     if (teacher_id !== undefined) updates.teacher_id = teacher_id;
@@ -60,6 +62,7 @@ export async function POST({ request, cookies }) {
         id,
         title,
         description,
+        topic,
         starts_at,
         duration_minutes,
         capacity,
@@ -86,6 +89,7 @@ export async function POST({ request, cookies }) {
       id: data.id,
       title: data.title || 'Class',
       description: data.description || null,
+      topic: data.topic || null,
       start: startIso,
       end: endIso,
       duration_minutes: data.duration_minutes || 60,

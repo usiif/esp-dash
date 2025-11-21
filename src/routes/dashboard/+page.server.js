@@ -57,7 +57,16 @@ export async function load({ cookies }) {
       capacity,
       levels,
       zoom_link,
-      teacher:team(id, full_name, email)
+      teacher:team(id, full_name, email),
+      class_prep_items(
+        id,
+        title,
+        description,
+        url,
+        kind,
+        position,
+        is_required
+      )
     `)
     .gte('starts_at', now)
     .lte('starts_at', endIso)
@@ -92,7 +101,7 @@ export async function load({ cookies }) {
   // Fetch student's enrollments
   const enrollments = await getEnrollmentsByStudent(session.student_id);
 
-  // Map enrollments to simpler format with enrollment_id included
+  // Map enrollments to simpler format with enrollment_id and prep_items included
   const myClasses = enrollments.map(e => ({
     enrollment_id: e.id,
     class_id: e.class_id,
@@ -108,12 +117,66 @@ export async function load({ cookies }) {
       capacity: e.classes.capacity || 0,
       levels: Array.isArray(e.classes.levels) ? e.classes.levels : [],
       zoom_link: e.classes.zoom_link,
-      teacher: e.classes.teacher ? e.classes.teacher.full_name || e.classes.teacher.email : null
+      teacher: e.classes.teacher ? e.classes.teacher.full_name || e.classes.teacher.email : null,
+      prep_items: []  // Will be populated from classes data if available
     } : null
   })).filter(e => e.class !== null);
 
   // Get set of enrolled class IDs
   const enrolledClassIds = new Set(myClasses.map(e => e.class_id));
+
+  // Fetch prep items for enrolled classes
+  const enrolledClassIdsList = Array.from(enrolledClassIds);
+  if (enrolledClassIdsList.length > 0) {
+    const { data: prepItemsData } = await supabase
+      .from('class_prep_items')
+      .select('*')
+      .in('class_id', enrolledClassIdsList)
+      .order('created_at', { ascending: true });
+
+    // Map prep items to classes
+    const prepItemsByClass = (prepItemsData || []).reduce((acc, item) => {
+      if (!acc[item.class_id]) acc[item.class_id] = [];
+      acc[item.class_id].push({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        url: item.url,
+        kind: item.kind,
+        is_required: item.is_required
+      });
+      return acc;
+    }, {});
+
+    // Add prep items to myClasses
+    myClasses.forEach(enrollment => {
+      if (enrollment.class && prepItemsByClass[enrollment.class.id]) {
+        enrollment.class.prep_items = prepItemsByClass[enrollment.class.id];
+      }
+    });
+  }
+
+  // Fetch prep completion status for all enrollments
+  const enrollmentIds = myClasses.map(e => e.enrollment_id);
+  let prepStatus = {};
+
+  if (enrollmentIds.length > 0) {
+    const { data: prepStatusData } = await supabase
+      .from('enrollment_prep_status')
+      .select('enrollment_id, prep_item_id, is_done')
+      .in('enrollment_id', enrollmentIds);
+
+    // Create a map: enrollment_id -> Array of completed prep_item_ids
+    prepStatus = (prepStatusData || []).reduce((acc, item) => {
+      if (!acc[item.enrollment_id]) {
+        acc[item.enrollment_id] = [];
+      }
+      if (item.is_done) {
+        acc[item.enrollment_id].push(item.prep_item_id);
+      }
+      return acc;
+    }, {});
+  }
 
   return {
     user,
@@ -121,6 +184,7 @@ export async function load({ cookies }) {
     tz,
     availableClasses,
     myClasses,
-    enrolledClassIds: Array.from(enrolledClassIds)
+    enrolledClassIds: Array.from(enrolledClassIds),
+    prepStatus
   };
 }

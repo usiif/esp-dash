@@ -9,11 +9,23 @@
     const dispatch = createEventDispatcher();
 
     // Tab state for event mode
-    let activeTab = 'info'; // 'info' | 'students'
+    let activeTab = 'info'; // 'info' | 'students' | 'prep'
 
     // Enrolled students data
     let enrolledStudents = [];
     let loadingStudents = false;
+
+    // Prep items data
+    let prepItems = [];
+    let loadingPrepItems = false;
+    let editingPrepItem = null; // For inline editing
+    let newPrepItem = {
+      title: '',
+      description: '',
+      url: '',
+      kind: '',
+      is_required: false
+    };
 
     // Fetch enrolled students when class is selected
     async function fetchEnrolledStudents() {
@@ -37,6 +49,102 @@
         enrolledStudents = [];
       } finally {
         loadingStudents = false;
+      }
+    }
+
+    // Fetch prep items when class is selected
+    async function fetchPrepItems() {
+      if (!panelData?.id) {
+        prepItems = [];
+        return;
+      }
+
+      loadingPrepItems = true;
+      try {
+        const response = await fetch(`/api/classes/${panelData.id}/prep-items`);
+        if (response.ok) {
+          const data = await response.json();
+          prepItems = data.prep_items || [];
+        } else {
+          console.error('Failed to fetch prep items');
+          prepItems = [];
+        }
+      } catch (err) {
+        console.error('Error fetching prep items:', err);
+        prepItems = [];
+      } finally {
+        loadingPrepItems = false;
+      }
+    }
+
+    // Add new prep item
+    async function addPrepItem() {
+      if (!panelData?.id || !newPrepItem.title.trim()) return;
+
+      try {
+        const response = await fetch(`/api/classes/${panelData.id}/prep-items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newPrepItem)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          prepItems = [...prepItems, data.prep_item];
+          // Reset form
+          newPrepItem = {
+            title: '',
+            description: '',
+            url: '',
+            kind: '',
+            is_required: false
+          };
+        } else {
+          console.error('Failed to add prep item');
+        }
+      } catch (err) {
+        console.error('Error adding prep item:', err);
+      }
+    }
+
+    // Update prep item
+    async function updatePrepItem(prepItemId, updates) {
+      try {
+        const response = await fetch(`/api/prep-items/${prepItemId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates)
+        });
+
+        if (response.ok) {
+          prepItems = prepItems.map(item =>
+            item.id === prepItemId ? { ...item, ...updates } : item
+          );
+          editingPrepItem = null;
+        } else {
+          console.error('Failed to update prep item');
+        }
+      } catch (err) {
+        console.error('Error updating prep item:', err);
+      }
+    }
+
+    // Delete prep item
+    async function deletePrepItem(prepItemId) {
+      if (!confirm('Are you sure you want to delete this prep item?')) return;
+
+      try {
+        const response = await fetch(`/api/prep-items/${prepItemId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          prepItems = prepItems.filter(item => item.id !== prepItemId);
+        } else {
+          console.error('Failed to delete prep item');
+        }
+      } catch (err) {
+        console.error('Error deleting prep item:', err);
       }
     }
 
@@ -105,8 +213,9 @@
     $: if (panelMode === 'event' && panelData?.id) {
       // Reset to info tab when opening a new event
       activeTab = 'info';
-      // Fetch enrolled students
+      // Fetch enrolled students and prep items
       fetchEnrolledStudents();
+      fetchPrepItems();
     }
   </script>
   
@@ -133,8 +242,8 @@
       <!-- Tab Navigation (only in event mode) -->
       {#if panelMode === 'event'}
         <div class="flex border-b flex-shrink-0">
-          <button 
-            class="flex-1 px-6 py-3 text-sm font-medium transition-colors"
+          <button
+            class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
             class:text-orange-600={activeTab === 'info'}
             class:border-b-2={activeTab === 'info'}
             class:border-orange-600={activeTab === 'info'}
@@ -143,8 +252,8 @@
           >
             Class Info
           </button>
-          <button 
-            class="flex-1 px-6 py-3 text-sm font-medium transition-colors"
+          <button
+            class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
             class:text-orange-600={activeTab === 'students'}
             class:border-b-2={activeTab === 'students'}
             class:border-orange-600={activeTab === 'students'}
@@ -152,6 +261,17 @@
             on:click={() => activeTab = 'students'}
           >
             Students ({enrolledStudents.length})
+          </button>
+          <button
+            class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
+            class:text-orange-600={activeTab === 'prep'}
+            class:border-b-2={activeTab === 'prep'}
+            class:border-orange-600={activeTab === 'prep'}
+            class:text-gray-600={activeTab !== 'prep'}
+            on:click={() => activeTab = 'prep'}
+            disabled={!panelData.id}
+          >
+            Prep Items ({prepItems.length})
           </button>
         </div>
       {/if}
@@ -194,12 +314,23 @@
               <!-- Description -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea 
+                <textarea
                   bind:value={panelData.description}
                   rows="3"
                   class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   placeholder="Class description"
                 ></textarea>
+              </div>
+
+              <!-- Topic -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+                <input
+                  type="text"
+                  bind:value={panelData.topic}
+                  class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Class topic"
+                />
               </div>
   
               <!-- Start Date & Time -->
@@ -345,6 +476,197 @@
                     </div>
                   </div>
                 {/each}
+              {/if}
+            </div>
+          {:else if activeTab === 'prep'}
+            <!-- Prep Items Management -->
+            <div class="space-y-4">
+              <div class="mb-4">
+                <h3 class="text-sm font-semibold text-gray-700">Preparation Items</h3>
+                <p class="text-xs text-gray-500">Manage pre-class preparation materials and tasks</p>
+              </div>
+
+              {#if !panelData.id}
+                <div class="text-center py-8 text-gray-400 text-sm">
+                  Save the class first to add prep items
+                </div>
+              {:else}
+                <!-- Add New Prep Item Form -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 class="text-sm font-medium text-gray-700 mb-3">Add Prep Item</h4>
+                  <div class="space-y-3">
+                    <div>
+                      <input
+                        type="text"
+                        bind:value={newPrepItem.title}
+                        placeholder="Item title *"
+                        class="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <textarea
+                        bind:value={newPrepItem.description}
+                        placeholder="Description (optional)"
+                        rows="2"
+                        class="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      ></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <input
+                        type="url"
+                        bind:value={newPrepItem.url}
+                        placeholder="URL (optional)"
+                        class="px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                      <input
+                        type="text"
+                        bind:value={newPrepItem.kind}
+                        placeholder="Type (e.g., Video)"
+                        class="px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="new-is-required"
+                        bind:checked={newPrepItem.is_required}
+                        class="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <label for="new-is-required" class="text-sm text-gray-700">Required</label>
+                    </div>
+                    <button
+                      on:click={addPrepItem}
+                      disabled={!newPrepItem.title.trim()}
+                      class="w-full px-3 py-2 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Item
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Existing Prep Items List -->
+                {#if loadingPrepItems}
+                  <div class="text-center py-8 text-gray-400 text-sm">
+                    Loading prep items...
+                  </div>
+                {:else if prepItems.length === 0}
+                  <div class="text-center py-8 text-gray-400 text-sm">
+                    No prep items yet
+                  </div>
+                {:else}
+                  <div class="space-y-2">
+                    {#each prepItems as item, index (item.id)}
+                      <div class="border border-gray-200 rounded-lg p-3 bg-white">
+                        {#if editingPrepItem === item.id}
+                          <!-- Edit Mode -->
+                          <div class="space-y-2">
+                            <input
+                              type="text"
+                              value={item.title}
+                              on:blur={(e) => updatePrepItem(item.id, { title: e.target.value })}
+                              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-orange-500"
+                            />
+                            <textarea
+                              value={item.description || ''}
+                              on:blur={(e) => updatePrepItem(item.id, { description: e.target.value })}
+                              rows="2"
+                              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-orange-500"
+                            ></textarea>
+                            <div class="grid grid-cols-2 gap-2">
+                              <input
+                                type="url"
+                                value={item.url || ''}
+                                on:blur={(e) => updatePrepItem(item.id, { url: e.target.value })}
+                                placeholder="URL"
+                                class="px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-orange-500"
+                              />
+                              <input
+                                type="text"
+                                value={item.kind || ''}
+                                on:blur={(e) => updatePrepItem(item.id, { kind: e.target.value })}
+                                placeholder="Type"
+                                class="px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-orange-500"
+                              />
+                            </div>
+                            <div class="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={item.is_required}
+                                on:change={(e) => updatePrepItem(item.id, { is_required: e.target.checked })}
+                                class="w-4 h-4 text-orange-600 border-gray-300 rounded"
+                              />
+                              <label class="text-sm text-gray-700">Required</label>
+                            </div>
+                            <button
+                              on:click={() => editingPrepItem = null}
+                              class="text-xs text-orange-600 hover:text-orange-700"
+                            >
+                              Done Editing
+                            </button>
+                          </div>
+                        {:else}
+                          <!-- View Mode -->
+                          <div class="flex items-start gap-2">
+                            <!-- Item Content -->
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-start justify-between gap-2">
+                                <div class="flex-1 min-w-0">
+                                  <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-sm font-medium text-gray-900">{item.title}</span>
+                                    {#if item.is_required}
+                                      <span class="px-2 py-0.5 text-xs bg-orange-100 text-orange-700 rounded">Required</span>
+                                    {/if}
+                                    {#if item.kind}
+                                      <span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">{item.kind}</span>
+                                    {/if}
+                                  </div>
+                                  {#if item.description}
+                                    <p class="text-xs text-gray-600 mt-1">{item.description}</p>
+                                  {/if}
+                                  {#if item.url}
+                                    <a
+                                      href={item.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      class="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-flex items-center gap-1"
+                                    >
+                                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                      <span>Open link</span>
+                                    </a>
+                                  {/if}
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex gap-1 flex-shrink-0">
+                                  <button
+                                    on:click={() => editingPrepItem = item.id}
+                                    class="p-1 text-gray-400 hover:text-orange-600"
+                                    title="Edit"
+                                  >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    on:click={() => deletePrepItem(item.id)}
+                                    class="p-1 text-gray-400 hover:text-red-600"
+                                    title="Delete"
+                                  >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        {/if}
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
               {/if}
             </div>
           {/if}

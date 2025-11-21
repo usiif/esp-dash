@@ -10,11 +10,78 @@
   let showToast = false;
   let toastMessage = '';
 
+  // Prep status: enrollment_id -> Set of completed prep_item_ids
+  $: prepStatus = Object.entries(data.prepStatus || {}).reduce((acc, [enrollmentId, itemIds]) => {
+    acc[enrollmentId] = new Set(itemIds);
+    return acc;
+  }, {});
+
   // Sort enrollments by start time and take first 3
   $: upcomingClasses = (data.myClasses || [])
     .filter(e => e.class && new Date(e.class.start) >= new Date())
     .sort((a, b) => new Date(a.class.start) - new Date(b.class.start))
     .slice(0, 3);
+
+  // Calculate prep completion for all enrollments (reactive)
+  $: prepCompletions = upcomingClasses.reduce((acc, enrollment) => {
+    const prepItems = enrollment.class?.prep_items || [];
+    if (prepItems.length === 0) {
+      acc[enrollment.enrollment_id] = null;
+      return acc;
+    }
+
+    const completedItems = prepStatus[enrollment.enrollment_id] || new Set();
+    const completed = prepItems.filter(item => completedItems.has(item.id)).length;
+    const total = prepItems.length;
+    const percentage = Math.round((completed / total) * 100);
+
+    acc[enrollment.enrollment_id] = { completed, total, percentage };
+    return acc;
+  }, {});
+
+  async function togglePrepItem(enrollmentId, prepItemId, isDone) {
+    try {
+      const response = await fetch('/api/prep-status/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollment_id: enrollmentId,
+          prep_item_id: prepItemId,
+          is_done: isDone
+        })
+      });
+
+      if (!response.ok) {
+        toastMessage = 'Failed to update prep item';
+        showToast = true;
+        setTimeout(() => showToast = false, 3000);
+        return;
+      }
+
+      // Update local state
+      const newPrepStatus = {};
+      for (const [key, value] of Object.entries(prepStatus)) {
+        newPrepStatus[key] = new Set(value);
+      }
+
+      if (!newPrepStatus[enrollmentId]) {
+        newPrepStatus[enrollmentId] = new Set();
+      }
+
+      if (isDone) {
+        newPrepStatus[enrollmentId].add(prepItemId);
+      } else {
+        newPrepStatus[enrollmentId].delete(prepItemId);
+      }
+
+      prepStatus = newPrepStatus;
+    } catch (err) {
+      console.error('Error toggling prep item:', err);
+      toastMessage = 'Failed to update prep item';
+      showToast = true;
+      setTimeout(() => showToast = false, 3000);
+    }
+  }
 
   function formatDateTime(dateStr) {
     const date = new Date(dateStr);
@@ -142,18 +209,84 @@
         <h2 class="text-lg font-semibold text-gray-900 mb-3">Upcoming Classes</h2>
 
         {#if upcomingClasses.length > 0}
-          <div class="space-y-2 mb-3">
+          <div class="space-y-3 mb-3">
             {#each upcomingClasses as enrollment (enrollment.enrollment_id)}
+              {@const prepItems = enrollment.class?.prep_items || []}
+              {@const completedItems = prepStatus[enrollment.enrollment_id] || new Set()}
+              {@const prepCompletion = prepCompletions[enrollment.enrollment_id]}
+
               <div class="bg-white border border-gray-200 rounded-lg p-3 hover:border-orange-300 transition-colors">
-                <div class="flex flex-col gap-2">
+                <div class="flex flex-col gap-3">
                   <!-- Class Info -->
                   <div>
                     <h3 class="font-semibold text-gray-900 text-sm mb-0.5">{enrollment.class.title}</h3>
                     <p class="text-xs text-orange-600 font-medium">{formatDateTime(enrollment.class.start)}</p>
                   </div>
 
+                  <!-- Prep Status -->
+                  {#if prepCompletion}
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-medium text-gray-600">Preparation</span>
+                        <span class="text-xs font-semibold"
+                          class:text-green-600={prepCompletion.percentage === 100}
+                          class:text-orange-600={prepCompletion.percentage > 0 && prepCompletion.percentage < 100}
+                          class:text-gray-500={prepCompletion.percentage === 0}>
+                          {prepCompletion.completed}/{prepCompletion.total}
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                        <div
+                          class="h-1.5 rounded-full transition-all"
+                          class:bg-green-500={prepCompletion.percentage === 100}
+                          class:bg-orange-500={prepCompletion.percentage > 0 && prepCompletion.percentage < 100}
+                          class:bg-gray-400={prepCompletion.percentage === 0}
+                          style="width: {prepCompletion.percentage}%"
+                        ></div>
+                      </div>
+
+                      <!-- Prep Items List -->
+                      <div class="space-y-2">
+                        {#each prepItems as prepItem}
+                          {@const isCompleted = completedItems.has(prepItem.id)}
+                          <div class="flex items-start gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isCompleted}
+                              on:change={(e) => togglePrepItem(enrollment.enrollment_id, prepItem.id, e.target.checked)}
+                              class="w-4 h-4 mt-0.5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 flex-shrink-0 cursor-pointer"
+                            />
+                            <div class="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+                              <span class="text-xs text-gray-700"
+                                class:line-through={isCompleted}
+                                class:text-gray-500={isCompleted}>
+                                {prepItem.title}
+                              </span>
+                              {#if prepItem.is_required}
+                                <span class="text-xs text-orange-600">*</span>
+                              {/if}
+                              {#if prepItem.url}
+                                <a
+                                  href={prepItem.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  class="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center gap-0.5"
+                                >
+                                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                  <span>Link</span>
+                                </a>
+                              {/if}
+                            </div>
+                          </div>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
                   <!-- Actions -->
-                  <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-2 pt-2 border-t border-gray-100">
                     {#if enrollment.class.zoom_link}
                       <a
                         href={enrollment.class.zoom_link}

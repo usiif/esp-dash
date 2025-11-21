@@ -56,6 +56,7 @@ export async function load({ cookies }) {
     .select(`
       id,
       title,
+      topic,
       description,
       notes,
       starts_at,
@@ -63,7 +64,16 @@ export async function load({ cookies }) {
       capacity,
       levels,
       zoom_link,
-      teacher:team(id, full_name, email)
+      teacher:team(id, full_name, email),
+      class_prep_items(
+        id,
+        title,
+        description,
+        url,
+        kind,
+        position,
+        is_required
+      )
     `)
     .gte('starts_at', now)
     .lte('starts_at', endIso)
@@ -71,6 +81,23 @@ export async function load({ cookies }) {
 
   if (classesError) {
     console.error('Failed to load classes:', classesError);
+  }
+
+  // Get enrollment counts for all classes to calculate available spaces
+  const classIds = (classesData || []).map(c => c.id);
+  let enrollmentCounts = {};
+
+  if (classIds.length > 0) {
+    const { data: countData } = await supabase
+      .from('enrollments')
+      .select('class_id')
+      .in('class_id', classIds)
+      .in('status', ['reserved', 'confirmed']);
+
+    enrollmentCounts = (countData || []).reduce((acc, enrollment) => {
+      acc[enrollment.class_id] = (acc[enrollment.class_id] || 0) + 1;
+      return acc;
+    }, {});
   }
 
   // Filter classes by student's level
@@ -81,19 +108,36 @@ export async function load({ cookies }) {
       if (!studentLevelNum) return true; // Student has no level
       return c.levels.includes(studentLevelNum);
     })
-    .map(c => ({
-      id: c.id,
-      title: c.title || 'Class',
-      description: c.description,
-      notes: c.notes,
-      start: c.starts_at,
-      duration_minutes: c.duration_minutes || 60,
-      capacity: c.capacity || 0,
-      levels: Array.isArray(c.levels) ? c.levels : [],
-      zoom_link: c.zoom_link,
-      teacher: c.teacher ? c.teacher.full_name || c.teacher.email : null,
-      teacher_id: c.teacher ? c.teacher.id : null
-    }));
+    .map(c => {
+      const enrolled = enrollmentCounts[c.id] || 0;
+      const capacity = c.capacity || 0;
+      const available_spaces = Math.max(0, capacity - enrolled);
+
+      return {
+        id: c.id,
+        title: c.title || 'Class',
+        topic: c.topic,
+        description: c.description,
+        notes: c.notes,
+        start: c.starts_at,
+        duration_minutes: c.duration_minutes || 60,
+        capacity,
+        available_spaces,
+        levels: Array.isArray(c.levels) ? c.levels : [],
+        zoom_link: c.zoom_link,
+        teacher: c.teacher ? c.teacher.full_name || c.teacher.email : null,
+        teacher_id: c.teacher ? c.teacher.id : null,
+        prep_items: (c.class_prep_items || [])
+          .map(p => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            url: p.url,
+            kind: p.kind,
+            is_required: p.is_required
+          }))
+      };
+    });
 
   // Fetch student's enrollments
   const enrollments = await getEnrollmentsByStudent(session.student_id);
@@ -121,12 +165,35 @@ export async function load({ cookies }) {
   // Get set of enrolled class IDs
   const enrolledClassIds = new Set(myClasses.map(e => e.class_id));
 
+  // Fetch prep completion status for all enrollments
+  const enrollmentIds = myClasses.map(e => e.enrollment_id);
+  let prepStatus = {};
+
+  if (enrollmentIds.length > 0) {
+    const { data: prepStatusData } = await supabase
+      .from('enrollment_prep_status')
+      .select('enrollment_id, prep_item_id, is_done')
+      .in('enrollment_id', enrollmentIds);
+
+    // Create a map: enrollment_id -> Array of completed prep_item_ids
+    prepStatus = (prepStatusData || []).reduce((acc, item) => {
+      if (!acc[item.enrollment_id]) {
+        acc[item.enrollment_id] = [];
+      }
+      if (item.is_done) {
+        acc[item.enrollment_id].push(item.prep_item_id);
+      }
+      return acc;
+    }, {});
+  }
+
   return {
     user,
     appointments,
     tz,
     availableClasses,
     myClasses,
-    enrolledClassIds: Array.from(enrolledClassIds)
+    enrolledClassIds: Array.from(enrolledClassIds),
+    prepStatus
   };
 }
