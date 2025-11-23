@@ -1,5 +1,6 @@
 <script>
   import { fade } from 'svelte/transition';
+  import { page } from '$app/stores';
   import StudentNav from '$lib/components/StudentNav.svelte';
   import Onboarding from '$lib/components/onboarding.svelte';
 
@@ -14,6 +15,27 @@
   let enrollingClassId = null;
 
   let enrolledClassIds = new Set(data.enrolledClassIds || []);
+
+  // Get user's level number
+  const userLevelNum = data.user.level_number ? parseInt(data.user.level_number) : null;
+  const canShowPreviousLevel = userLevelNum && userLevelNum >= 2 && userLevelNum <= 6;
+  const previousLevelName = canShowPreviousLevel ? `Level ${userLevelNum - 1}` : null;
+
+  // Check which level we're currently viewing from URL
+  $: currentViewLevel = $page.url.searchParams.get('level') || data.user.level;
+
+  // Handle level toggle - full page reload with query parameter
+  function toggleToLevel(levelName) {
+    const url = new URL(window.location.href);
+    if (levelName === data.user.level) {
+      // Switching back to user's own level - remove query param
+      url.searchParams.delete('level');
+    } else {
+      // Switching to different level
+      url.searchParams.set('level', levelName);
+    }
+    window.location.href = url.toString();
+  }
 
   // Create a map of class_id to enrollment info
   $: enrollmentMap = new Map((data.myClasses || []).map(e => [e.class_id, e]));
@@ -57,7 +79,7 @@
 
   $: calendarDays = generateCalendarDays();
 
-  // Group classes by date
+  // Group classes by date (no client-side filtering needed - server handles it)
   $: classesByDate = (data.availableClasses || []).reduce((acc, classItem) => {
     const dateKey = new Date(classItem.start).toDateString();
     if (!acc[dateKey]) acc[dateKey] = [];
@@ -250,15 +272,39 @@
   <main class="lg:ml-56 p-4 sm:p-6 max-w-7xl">
     <!-- Header -->
     <div class="mb-6">
-      <div class="flex items-center gap-2 mb-1">
-        <h1 class="text-2xl font-bold text-gray-900">Browse Classes</h1>
-        {#if data.user.level}
-          <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded">
-            {data.user.level}
-          </span>
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">
+            {currentViewLevel} Live Classes
+          </h1>
+          <p class="text-sm text-gray-600 mt-1">{formatDateRange()}</p>
+        </div>
+
+        {#if canShowPreviousLevel}
+          <div class="inline-flex rounded-lg border border-gray-300 bg-white p-1">
+            <button
+              on:click={() => toggleToLevel(data.user.level)}
+              class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+              class:bg-orange-500={currentViewLevel === data.user.level}
+              class:text-white={currentViewLevel === data.user.level}
+              class:text-gray-700={currentViewLevel !== data.user.level}
+              class:hover:bg-gray-100={currentViewLevel !== data.user.level}
+            >
+              {data.user.level}
+            </button>
+            <button
+              on:click={() => toggleToLevel(previousLevelName)}
+              class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+              class:bg-orange-500={currentViewLevel === previousLevelName}
+              class:text-white={currentViewLevel === previousLevelName}
+              class:text-gray-700={currentViewLevel !== previousLevelName}
+              class:hover:bg-gray-100={currentViewLevel !== previousLevelName}
+            >
+              {previousLevelName}
+            </button>
+          </div>
         {/if}
       </div>
-      <p class="text-sm text-gray-600">{formatDateRange()}</p>
     </div>
 
     <!-- Calendar View -->
@@ -386,7 +432,7 @@
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
-                Enrolled
+                Scheduled
               </span>
             {/if}
           </div>
@@ -532,14 +578,28 @@
             </div>
           {:else}
             {@const isEnrolling = enrollingClassId === selectedClass.id}
+            {@const isFull = selectedClass.available_spaces === 0}
 
             <!-- Not enrolled: Show Reserve button -->
             <button
               on:click={() => reserveSpot(selectedClass)}
-              disabled={isEnrolling}
-              class="w-full px-4 py-2.5 bg-orange-500 text-white text-sm font-medium rounded hover:bg-orange-600 disabled:opacity-50"
+              disabled={isEnrolling || isFull}
+              class="w-full px-4 py-2.5 text-sm font-medium rounded transition-colors"
+              class:bg-orange-500={!isFull}
+              class:hover:bg-orange-600={!isFull}
+              class:text-white={!isFull}
+              class:bg-gray-300={isFull}
+              class:text-gray-600={isFull}
+              class:cursor-not-allowed={isFull}
+              class:disabled:opacity-50={!isFull}
             >
-              {isEnrolling ? 'Reserving...' : 'Reserve Spot'}
+              {#if isFull}
+                Class Full
+              {:else if isEnrolling}
+                Reserving...
+              {:else}
+                Reserve Spot
+              {/if}
             </button>
           {/if}
         </div>

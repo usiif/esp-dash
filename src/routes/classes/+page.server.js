@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { getUpcomingAppointments } from '$lib/ghl.js';
 import { getSessionById, supabase, getEnrollmentsByStudent } from '$lib/supabase.js';
 
-export async function load({ cookies }) {
+export async function load({ cookies, url }) {
   const sessionId = cookies.get('session_id');
   if (!sessionId) throw redirect(302, '/');
 
@@ -15,6 +15,9 @@ export async function load({ cookies }) {
 
   // Extract number from "Level 4" → "4"
   const levelNum = session.level_key?.match(/\d+/)?.[0] ?? null;
+
+  // Check if user wants to view previous level classes
+  const viewLevel = url.searchParams.get('level');
 
   // Build URLs inline
   const calendarLink = levelNum
@@ -100,13 +103,17 @@ export async function load({ cookies }) {
     }, {});
   }
 
-  // Filter classes by student's level
+  // Determine which level to filter by
+  // If viewLevel query param is set, use that; otherwise use student's level
   const studentLevelNum = levelNum ? `Level ${levelNum}` : null;
+  const filterLevel = viewLevel || studentLevelNum;
+
+  // Filter classes by the determined level
   const availableClasses = (classesData || [])
     .filter(c => {
       if (!c.levels || c.levels.length === 0) return true; // No level restriction
-      if (!studentLevelNum) return true; // Student has no level
-      return c.levels.includes(studentLevelNum);
+      if (!filterLevel) return true; // No level to filter by
+      return c.levels.includes(filterLevel);
     })
     .map(c => {
       const enrolled = enrollmentCounts[c.id] || 0;

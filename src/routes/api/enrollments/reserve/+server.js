@@ -7,6 +7,7 @@ import {
   getEnrollmentCountByClass,
   isStudentEnrolled
 } from '$lib/supabase.js';
+import { sendClassBookingEmail } from '$lib/email.js';
 
 export async function POST({ request, cookies }) {
   // Auth check
@@ -31,16 +32,44 @@ export async function POST({ request, cookies }) {
 
     const studentId = session.student_id;
 
-    // Check if already enrolled
+    // Check if already enrolled (active enrollment)
     const alreadyEnrolled = await isStudentEnrolled(studentId, class_id);
     if (alreadyEnrolled) {
       return json({ error: 'Already enrolled in this class' }, { status: 400 });
     }
 
-    // Get class details to check capacity
+    // Check if there's a cancelled enrollment that we can reactivate
+    const { data: existingEnrollment } = await supabase
+      .from('enrollments')
+      .select('id, status')
+      .eq('student_id', studentId)
+      .eq('class_id', class_id)
+      .single();
+
+    // Get student email for confirmation email
+    const { data: studentData, error: studentError } = await supabase
+      .from('students')
+      .select('email, first_name')
+      .eq('id', studentId)
+      .single();
+
+    if (studentError || !studentData) {
+      console.error('Failed to get student data:', studentError);
+      // Continue with enrollment even if we can't get student data
+    }
+
+    // Get class details to check capacity and for email
     const { data: classData, error: classError } = await supabase
       .from('classes')
-      .select('capacity')
+      .select(`
+        capacity,
+        title,
+        topic,
+        starts_at,
+        duration_minutes,
+        zoom_link,
+        teacher:team(full_name, email)
+      `)
       .eq('id', class_id)
       .single();
 
@@ -55,14 +84,53 @@ export async function POST({ request, cookies }) {
       return json({ error: 'Class is full' }, { status: 400 });
     }
 
-    // Create the enrollment
-    const enrollment = await createEnrollment({
-      student_id: studentId,
-      class_id,
-      status: 'reserved'
-    });
+    // Create or reactivate the enrollment
+    let enrollment;
+    if (existingEnrollment && existingEnrollment.status === 'cancelled') {
+      // Reactivate cancelled enrollment
+      const { data: updated, error: updateError } = await supabase
+        .from('enrollments')
+        .update({
+          status: 'reserved',
+          enrolled_at: new Date().toISOString()
+        })
+        .eq('id', existingEnrollment.id)
+        .select()
+        .single();
 
-    console.log('✅ Student enrolled:', { studentId, class_id, enrollmentId: enrollment.id });
+      if (updateError) throw updateError;
+      enrollment = updated;
+      console.log('✅ Student re-enrolled (reactivated):', { studentId, class_id, enrollmentId: enrollment.id });
+    } else {
+      // Create new enrollment
+      enrollment = await createEnrollment({
+        student_id: studentId,
+        class_id,
+        status: 'reserved'
+      });
+      console.log('✅ Student enrolled:', { studentId, class_id, enrollmentId: enrollment.id });
+    }
+
+    // Send confirmation email (don't await - fire and forget)
+    if (studentData?.email) {
+      sendClassBookingEmail({
+        studentEmail: studentData.email,
+        studentName: studentData.first_name || session.first_name || 'there',
+        className: classData.title || 'Spanish Class',
+        teacherName: classData.teacher?.full_name || 'your teacher',
+        startsAt: classData.starts_at,
+        durationMinutes: classData.duration_minutes || 60,
+        topic: classData.topic,
+        zoomLink: classData.zoom_link,
+        timezone: 'UTC', // TODO: Get from student preferences/cookies
+        classId: class_id
+      }).catch(err => {
+        console.error('Failed to send booking confirmation email:', err);
+        // Don't fail the booking if email fails
+      });
+    } else {
+      console.warn('⚠️ Could not send confirmation email: student email not found');
+    }
 
     return json({ success: true, enrollment });
 

@@ -213,25 +213,45 @@
 
                     {#if cell.events.length > 0}
                       {#each cell.events.filter(matchesFilter) as ev (ev.id)}
-                        <button class="flex items-center gap-2 w-full text-left rounded px-2 py-1 hover:bg-gray-50 h-7 cursor-pointer"
+                        <button class="flex flex-col gap-1 w-full text-left rounded px-2 py-1 hover:bg-gray-50 cursor-pointer"
                                 on:click={() => openEvent(ev)}
                                 title={ev.title}>
-                          <!-- colored dot -->
-                          <div class="w-2 h-2 rounded-full flex-shrink-0"
-                               style="background: {fallbackColor(ev)}">
+                          <div class="flex items-center gap-2">
+                            <!-- colored dot -->
+                            <div class="w-2 h-2 rounded-full flex-shrink-0"
+                                 style="background: {fallbackColor(ev)}">
+                            </div>
+
+                            <!-- time -->
+                            <div class="text-xs text-gray-500 w-[52px] flex-shrink-0">{shortTime(ev.start)}</div>
+
+                            <!-- title -->
+                            <div class="flex-1 min-w-0 text-xs font-medium truncate">{ev.title}</div>
+
+                            <!-- teacher initials -->
+                            <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0"
+                                 style="background: {fallbackColor(ev)}">
+                              {initials(ev.teacher)}
+                            </div>
                           </div>
-  
-                          <!-- time -->
-                          <div class="text-xs text-gray-500 w-[52px] flex-shrink-0">{shortTime(ev.start)}</div>
-  
-                          <!-- title -->
-                          <div class="flex-1 min-w-0 text-xs font-medium truncate">{ev.title}</div>
-  
-                          <!-- teacher initials -->
-                          <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0"
-                               style="background: {fallbackColor(ev)}">
-                            {initials(ev.teacher)}
-                          </div>
+
+                          <!-- Capacity progress bar -->
+                          {#if ev.capacity > 0}
+                            <div class="flex items-center gap-2 ml-[62px]">
+                              <div class="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  class="h-full rounded-full transition-all"
+                                  class:bg-green-500={ev.enrolled / ev.capacity < 0.7}
+                                  class:bg-yellow-500={ev.enrolled / ev.capacity >= 0.7 && ev.enrolled / ev.capacity < 0.9}
+                                  class:bg-red-500={ev.enrolled / ev.capacity >= 0.9}
+                                  style="width: {Math.min(100, (ev.enrolled / ev.capacity) * 100)}%"
+                                ></div>
+                              </div>
+                              <div class="text-[10px] text-gray-500 w-10 flex-shrink-0 text-right">
+                                {ev.enrolled}/{ev.capacity}
+                              </div>
+                            </div>
+                          {/if}
                         </button>
                       {/each}
   
@@ -269,20 +289,40 @@
 
                     {#if cell.events.length > 0}
                       {#each cell.events.filter(matchesFilter) as ev (ev.id)}
-                        <button class="flex items-center gap-2 w-full text-left rounded px-2 py-1 hover:bg-gray-50 h-7"
+                        <button class="flex flex-col gap-1 w-full text-left rounded px-2 py-1 hover:bg-gray-50 cursor-pointer"
                                 on:click={() => openEvent(ev)}
                                 title={ev.title}>
-                          <!-- time -->
-                          <div class="text-xs text-gray-500 w-12 flex-shrink-0">{shortTime(ev.start)}</div>
-  
-                          <!-- title -->
-                          <div class="flex-1 min-w-0 text-xs font-medium truncate">{ev.title}</div>
-  
-                          <!-- teacher initials -->
-                          <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0"
-                               style="background: {fallbackColor(ev)}">
-                            {initials(ev.teacher)}
+                          <div class="flex items-center gap-2">
+                            <!-- time -->
+                            <div class="text-xs text-gray-500 w-12 flex-shrink-0">{shortTime(ev.start)}</div>
+
+                            <!-- title -->
+                            <div class="flex-1 min-w-0 text-xs font-medium truncate">{ev.title}</div>
+
+                            <!-- teacher initials -->
+                            <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0"
+                                 style="background: {fallbackColor(ev)}">
+                              {initials(ev.teacher)}
+                            </div>
                           </div>
+
+                          <!-- Capacity progress bar -->
+                          {#if ev.capacity > 0}
+                            <div class="flex items-center gap-2 ml-[52px]">
+                              <div class="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  class="h-full rounded-full transition-all"
+                                  class:bg-green-500={ev.enrolled / ev.capacity < 0.7}
+                                  class:bg-yellow-500={ev.enrolled / ev.capacity >= 0.7 && ev.enrolled / ev.capacity < 0.9}
+                                  class:bg-red-500={ev.enrolled / ev.capacity >= 0.9}
+                                  style="width: {Math.min(100, (ev.enrolled / ev.capacity) * 100)}%"
+                                ></div>
+                              </div>
+                              <div class="text-[10px] text-gray-500 w-10 flex-shrink-0 text-right">
+                                {ev.enrolled}/{ev.capacity}
+                              </div>
+                            </div>
+                          {/if}
                         </button>
                       {/each}
   

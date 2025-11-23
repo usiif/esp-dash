@@ -15,9 +15,10 @@ export function generateCode() {
  * @param {string} to - Recipient email.
  * @param {string} subject - Email subject.
  * @param {string} body - Email text body.
+ * @param {string} [htmlBody] - Optional HTML email body.
  * @returns {Promise<boolean>} true if sent successfully, false otherwise.
  */
-export async function sendEmail(to, subject, body) {
+export async function sendEmail(to, subject, body, htmlBody = null) {
 	const apiKey = env.SMTP2GO_API_KEY;
 	const sender = env.SMTP2GO_SENDER;
 	const replyto = "contact@expatspanishlessons.com"
@@ -27,25 +28,37 @@ export async function sendEmail(to, subject, body) {
 		return false;
 	}
 
+	if (!to || !subject || !body) {
+		console.error('❌ Missing required email parameters:', { to, subject, hasBody: !!body });
+		return false;
+	}
+
 	try {
+		const payload = {
+			sender,
+			to: [to],
+			subject,
+			text_body: body,
+			custom_headers: [
+				{
+					header: 'Reply-To',
+					value: replyto
+				}
+			]
+		};
+
+		// Add HTML body if provided
+		if (htmlBody) {
+			payload.html_body = htmlBody;
+		}
+
 		const res = await fetch('https://api.smtp2go.com/v3/email/send', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				'X-Smtp2go-Api-Key': apiKey
 			},
-			body: JSON.stringify({
-				sender,
-				to: [to],
-				subject,
-				text_body: body,
-				custom_headers: [
-					{
-						header: 'Reply-To',
-						value: replyto
-					}
-				]
-			})
+			body: JSON.stringify(payload)
 		});
 
 		if (!res.ok) {
@@ -78,17 +91,43 @@ export async function sendMagicLink(email, token, name, portalMagic) {
 	const body = `
 ${name}, ¡Bienvenido/a a Expat Spanish!
 
-To get started, we need to confirm your account and set your password. 
+To get started, we need to confirm your account and set your password.
 
 Please click this link below to start your account set up:
 ${link}
 
-This link will expire in 48 hours. 
+This link will expire in 48 hours.
 
-If you are unable to access your account or have any problems with logging in, please reply to this email. We monitor the inbox Mon-Saturday 9am-3pm. 
+If you are unable to access your account or have any problems with logging in, please reply to this email. We monitor the inbox Mon-Saturday 9am-3pm.
 
 Saludos,
-Expat Spanish 
+Expat Spanish
 `;
 	return await sendEmail(email, subject, body);
+}
+
+/**
+ * Send class booking confirmation email
+ * @param {object} options - Email options
+ * @param {string} options.studentEmail - Student's email
+ * @param {string} options.studentName - Student's first name
+ * @param {string} options.className - Class title
+ * @param {string} options.teacherName - Teacher's name
+ * @param {string} options.startsAt - ISO date string for class start
+ * @param {number} options.durationMinutes - Class duration
+ * @param {string} options.topic - Class topic
+ * @param {string} options.zoomLink - Zoom meeting link
+ * @param {string} options.timezone - Timezone (default: UTC)
+ * @param {string} [options.classId] - Optional class ID for calendar UID
+ * @returns {Promise<boolean>} Success status
+ */
+export async function sendClassBookingEmail(options) {
+	const { studentEmail, ...templateData } = options;
+
+	// Dynamic import to avoid circular dependencies and keep templates separate
+	const { classBookingTemplate } = await import('./email/templates/index.js');
+
+	const { subject, text, html } = classBookingTemplate(templateData);
+
+	return await sendEmail(studentEmail, subject, text, html);
 }

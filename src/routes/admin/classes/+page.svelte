@@ -1,5 +1,5 @@
 <script>
-    import TwoWeekDashboard from '$lib/components/TwoWeekDashboard.svelte';
+    import AdminCalendar from '$lib/components/AdminCalendar.svelte';
     import ClassEditPanel from '$lib/components/ClassEditPanel.svelte';
     export let data;
   
@@ -36,12 +36,6 @@
     function handleOpen(e) {
       panelMode = 'event';
       panelData = e.detail;
-      panelOpen = true;
-    }
-  
-    function handleMore(e) {
-      panelMode = 'date';
-      panelData = e.detail; // { date, events }
       panelOpen = true;
     }
   
@@ -164,15 +158,6 @@
       }
     }
   
-    // Handle filter changes - filters are applied client-side via matchesFilter in component
-    function handleFilterChange(e) {
-      console.log('filters', e.detail);
-    }
-  
-    function handleRangeChange(e) {
-      console.log('rangeChange', e.detail);
-    }
-
     function handleDelete(e) {
       const classData = e.detail;
       console.log('Delete requested for:', classData);
@@ -235,12 +220,23 @@
     <title>Admin — Classes</title>
   </svelte:head>
   
-  <div class="h-screen bg-orange-50 flex flex-col overflow-hidden">
-    <div class="flex-shrink-0 max-w-7xl w-full mx-auto px-6 py-6">
+  <div class="h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div class="flex-shrink-0 max-w-[1800px] w-full mx-auto px-6 py-6">
       <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-semibold">📋 Classes dashboard</h1>
-        <div class="text-sm text-gray-600">Two-week control view — click an event to open details</div>
-  
+        <h1 class="text-2xl font-semibold text-gray-900">Classes Calendar</h1>
+        <div class="text-sm text-gray-600">Click a class to view or edit details</div>
+      </div>
+    </div>
+
+    <div class="flex-1 max-w-[1800px] w-full mx-auto px-6 pb-6 overflow-hidden">
+      <AdminCalendar
+        {events}
+        calendarHeight="100%"
+        on:open={handleOpen}
+        on:create={handleCreate}
+      />
+    </div>
+
   <style>
     @keyframes slide-in {
       from {
@@ -252,25 +248,11 @@
         opacity: 1;
       }
     }
-  
+
     .animate-slide-in {
       animation: slide-in 0.3s ease-out;
     }
   </style>
-      </div>
-    </div>
-  
-    <div class="flex-1 max-w-7xl w-full mx-auto px-6 pb-6 overflow-hidden">
-      <TwoWeekDashboard
-        {events}
-        calendarHeight="100%"
-        on:open={handleOpen}
-        on:more={handleMore}
-        on:create={handleCreate}
-        on:filterChange={handleFilterChange}
-        on:rangeChange={handleRangeChange}
-      />
-    </div>
   
     <!-- Toast Notification -->
     {#if showToast}

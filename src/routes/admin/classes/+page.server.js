@@ -53,7 +53,26 @@ export async function load({ cookies }) {
     return { events: [] };
   }
 
+  // Get enrollment counts for all classes
+  const classIds = (data || []).map(c => c.id);
+  let enrollmentCounts = {};
+
+  if (classIds.length > 0) {
+    const { data: countData } = await supabase
+      .from('enrollments')
+      .select('class_id')
+      .in('class_id', classIds)
+      .in('status', ['reserved', 'confirmed']);
+
+    enrollmentCounts = (countData || []).reduce((acc, enrollment) => {
+      acc[enrollment.class_id] = (acc[enrollment.class_id] || 0) + 1;
+      return acc;
+    }, {});
+  }
+
   const events = (data || []).map((r) => {
+    const enrolled = enrollmentCounts[r.id] || 0;
+    const capacity = r.capacity || 0;
     const startIso = r.starts_at ? new Date(r.starts_at).toISOString() : null;
     const endIso = r.starts_at ? addMinutesToIso(r.starts_at, r.duration_minutes || 60) : null;
     return {
@@ -64,7 +83,9 @@ export async function load({ cookies }) {
       start: startIso,
       end: endIso,
       duration_minutes: r.duration_minutes || 60,
-      capacity: r.capacity || 0,
+      capacity,
+      enrolled,
+      available_spaces: Math.max(0, capacity - enrolled),
       levels: Array.isArray(r.levels) ? r.levels : (r.levels ? [r.levels] : []),
       teacher: r.teacher ? r.teacher.full_name || r.teacher.email : null,
       teacher_id: r.teacher ? r.teacher.id : null,
