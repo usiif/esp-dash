@@ -208,7 +208,7 @@
 
       <!-- Right Column: Upcoming Classes (1 column on desktop) -->
       <div class="lg:col-span-1">
-        <h2 class="text-lg font-semibold text-gray-900 mb-3">You Upcoming Live Classes</h2>
+        <h2 class="text-lg font-semibold text-gray-900 mb-3">Your Upcoming Live Classes</h2>
 
         {#if upcomingClasses.length > 0}
           <div class="space-y-3 mb-3">
@@ -222,7 +222,10 @@
                   <!-- Class Info -->
                   <div>
                     <h3 class="font-semibold text-gray-900 text-sm mb-0.5">{enrollment.class.title}</h3>
-                    <p class="text-xs text-orange-600 font-medium">{formatDateTime(enrollment.class.start)}</p>
+                    <p class="text-xs font-medium">
+                      <span class="text-orange-600">{formatDateTime(enrollment.class.start)}</span>
+                      <span class="text-gray-500"> ({tz})</span>
+                    </p>
                   </div>
 
                   <!-- Prep Status -->
