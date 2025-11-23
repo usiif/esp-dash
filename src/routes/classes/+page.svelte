@@ -99,6 +99,25 @@
     });
   }
 
+  function formatTimeRange(startDateStr, durationMinutes) {
+    const start = new Date(startDateStr);
+    const end = new Date(start.getTime() + durationMinutes * 60000);
+
+    const startTime = start.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: tz
+    });
+
+    const endTime = end.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: tz
+    });
+
+    return `${startTime} - ${endTime}`;
+  }
+
   function formatDate(dateStr) {
     return new Date(dateStr).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -471,7 +490,7 @@
               <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>{formatTime(selectedClass.start)} • {selectedClass.duration_minutes} min</span>
+              <span>{formatTimeRange(selectedClass.start, selectedClass.duration_minutes)} ({tz})</span>
             </div>
             {#if selectedClass.teacher}
               <div class="flex items-center gap-1.5">
