@@ -274,9 +274,12 @@
     <div class="mb-6">
       <div class="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">
-            {currentViewLevel} Live Classes
-          </h1>
+          <div class="flex items-baseline gap-2">
+            <h1 class="text-2xl font-bold text-gray-900">
+              {currentViewLevel} Live Classes
+            </h1>
+            <span class="text-sm text-gray-500">({tz})</span>
+          </div>
           <p class="text-sm text-gray-600 mt-1">{formatDateRange()}</p>
         </div>
 
@@ -354,7 +357,7 @@
                   {@const isEnrolled = enrolledClassIds.has(classItem.id)}
                   <button
                     on:click={() => openClassDetails(classItem)}
-                    class="w-full text-left px-1.5 py-1 rounded text-xs transition-colors"
+                    class="w-full text-left px-1.5 py-1 rounded transition-colors"
                     class:bg-green-100={isEnrolled}
                     class:text-green-700={isEnrolled}
                     class:hover:bg-green-200={isEnrolled}
@@ -363,12 +366,12 @@
                     class:hover:bg-orange-200={!isEnrolled}
                   >
                     <div class="flex items-center justify-between gap-1">
-                      <span class="font-medium truncate">{formatTime(classItem.start)}</span>
+                      <span class="text-[11px] font-medium truncate">{formatTime(classItem.start)}</span>
                       {#if isEnrolled}
-                        <span class="flex-shrink-0">✓</span>
+                        <span class="flex-shrink-0 text-xs">✓</span>
                       {/if}
                     </div>
-                    <div class="hidden sm:block text-[10px] truncate mt-0.5 opacity-75">
+                    <div class="text-[11px] truncate mt-0.5 font-medium">
                       {classItem.title}
                     </div>
                   </button>
