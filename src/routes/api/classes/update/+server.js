@@ -79,9 +79,19 @@ export async function POST({ request, cookies }) {
       return json({ error: 'Failed to update class', details: error.message }, { status: 500 });
     }
 
+    // Get enrollment count for this class
+    const { data: enrollmentData } = await supabase
+      .from('enrollments')
+      .select('id')
+      .eq('class_id', id)
+      .in('status', ['reserved', 'confirmed']);
+
+    const enrolled = enrollmentData ? enrollmentData.length : 0;
+    const classCapacity = data.capacity || 0;
+
     // Transform the response to match the frontend format
     const startIso = data.starts_at ? new Date(data.starts_at).toISOString() : null;
-    const endIso = data.starts_at 
+    const endIso = data.starts_at
       ? new Date(new Date(data.starts_at).getTime() + (data.duration_minutes || 60) * 60000).toISOString()
       : null;
 
@@ -93,7 +103,9 @@ export async function POST({ request, cookies }) {
       start: startIso,
       end: endIso,
       duration_minutes: data.duration_minutes || 60,
-      capacity: data.capacity || 0,
+      capacity: classCapacity,
+      enrolled,
+      available_spaces: Math.max(0, classCapacity - enrolled),
       levels: Array.isArray(data.levels) ? data.levels : (data.levels ? [data.levels] : []),
       teacher: data.teacher ? data.teacher.full_name || data.teacher.email : null,
       teacher_id: data.teacher ? data.teacher.id : null,

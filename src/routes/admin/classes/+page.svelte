@@ -93,6 +93,7 @@
           ? {
               title: classData.title,
               description: classData.description,
+              topic: classData.topic,
               starts_at: startsAtIso,
               duration_minutes: classData.duration_minutes,
               teacher_id: classData.teacher_id,
@@ -107,7 +108,8 @@
               id: classData.id,
               title: classData.title,
               description: classData.description,
-              start: classData.start,
+              topic: classData.topic,
+              start: startsAtIso,
               duration_minutes: classData.duration_minutes,
               teacher_id: classData.teacher_id,
               levels: classData.levels,
