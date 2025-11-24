@@ -30,7 +30,7 @@ export async function POST({ request }) {
     'Student';
 
   const levelKey =
-    payload['Access Level'] ||
+    payload['Dashboard Level'] ||
     null;
 
   const portalMagic =

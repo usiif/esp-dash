@@ -49,13 +49,13 @@ export async function POST({ request, cookies }) {
     // Get student email for confirmation email
     const { data: studentData, error: studentError } = await supabase
       .from('students')
-      .select('email, first_name')
+      .select('email')
       .eq('id', studentId)
       .single();
 
     if (studentError || !studentData) {
-      console.error('Failed to get student data:', studentError);
-      // Continue with enrollment even if we can't get student data
+      console.error('Failed to get student email:', studentError);
+      // Continue with enrollment even if we can't get student email
     }
 
     // Get class details to check capacity and for email
@@ -115,7 +115,7 @@ export async function POST({ request, cookies }) {
     if (studentData?.email) {
       sendClassBookingEmail({
         studentEmail: studentData.email,
-        studentName: studentData.first_name || session.first_name || 'there',
+        studentName: session.first_name || 'there',
         className: classData.title || 'Spanish Class',
         teacherName: classData.teacher?.full_name || 'your teacher',
         startsAt: classData.starts_at,

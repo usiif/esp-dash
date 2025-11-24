@@ -180,7 +180,7 @@ export async function createSession({
 export async function getSessionById(sessionId) {
   if (!sessionId) return null;
   const { data, error } = await supabase
-    .from('sessions')
+    .from('session_with_student')
     .select('id, student_id, first_name, level_key, ghl_contact_id, flashcards_deck, created_at, updated_at')
     .eq('id', sessionId)
     .single();
@@ -195,7 +195,7 @@ export async function getSessionById(sessionId) {
 export async function getSessionByStudent(studentId) {
   if (!studentId) return null;
   const { data, error } = await supabase
-    .from('sessions')
+    .from('session_with_student')
     .select('id, student_id, first_name, level_key, ghl_contact_id, flashcards_deck, created_at, updated_at')
     .eq('student_id', studentId)
     .order('updated_at', { ascending: false })
@@ -204,43 +204,6 @@ export async function getSessionByStudent(studentId) {
   if (error || !data || data.length === 0) return null;
   return data[0];
 }
-
-/**
- * Refresh session(s) for a student: recompute flashcards_deck and update session row.
- * Call this after updating students.level_key in your app.
- */
-export async function refreshSessionForStudent(studentId) {
-  if (!studentId) throw new Error('studentId required');
-
-  const { data: student, error: sErr } = await supabase
-    .from('students')
-    .select('id, first_name, last_name, full_name, level_key, ghl_contact_id')
-    .eq('id', studentId)
-    .single();
-
-  if (sErr || !student) throw sErr || new Error('student not found');
-
-  const level = student.level_key || null;
-  const fc = level ? getFlashcardLinks(level) : { deck: null };
-
-  const updatePayload = {
-    first_name: student.first_name || student.full_name || null,
-    level_key: level,
-    ghl_contact_id: student.ghl_contact_id || null,
-    flashcards_deck: fc.deck || null,
-    updated_at: new Date().toISOString()
-  };
-
-  const { data, error } = await supabase
-    .from('sessions')
-    .update(updatePayload)
-    .eq('student_id', studentId);
-
-  if (error) throw error;
-  return data; // array of updated rows
-}
-
-
 
 export async function deleteSession(sessionId) {
   if (!sessionId) return false;

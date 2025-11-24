@@ -1,6 +1,6 @@
 // src/routes/api/webhooks/sync-contacts/+server.js
 import { json } from '@sveltejs/kit';
-import { createStudent, refreshSessionForStudent } from '$lib/supabase.js';
+import { createStudent } from '$lib/supabase.js';
 import { env } from '$env/dynamic/private';
 
 const WEBHOOK_SECRET = env.WEBHOOK_SECRET;
@@ -27,7 +27,7 @@ export async function POST({ request }) {
     ((firstName || '') + ' ' + (lastName || '')).trim() ||
     null;
 
-  const levelKey = payload['Access Level'] || null;
+  const levelKey = payload['Dashboard Level'] || null;
   const portalMagic = payload?.customData?.portal_magic || payload.portal_magic || null;
   const ghlContactId = payload.contact_id || null;
   const tz = payload.timezone || payload.tz || null;
@@ -49,16 +49,6 @@ export async function POST({ request }) {
       ghl_contact_id: ghlContactId,
       tz,
     });
-
-    // If we got a student row back, refresh sessions so session rows stay in sync
-    if (student && student.id) {
-      try {
-        await refreshSessionForStudent(student.id);
-      } catch (err) {
-        console.error('[webhooks/sync-contacts] refreshSessionForStudent error:', err);
-        // don't fail the webhook if refresh fails — still return success to avoid retries
-      }
-    }
 
     return json({ success: true });
   } catch (err) {

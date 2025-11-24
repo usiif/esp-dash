@@ -1,6 +1,6 @@
 // src/routes/api/onboarding/+server.js
 import { json } from '@sveltejs/kit';
-import { getSessionById, supabase, refreshSessionForStudent } from '$lib/supabase.js';
+import { getSessionById, supabase } from '$lib/supabase.js';
 
 export async function POST({ request, cookies }) {
   try {
@@ -32,14 +32,6 @@ export async function POST({ request, cookies }) {
     if (error) {
       console.error('[onboarding] failed to update student:', error);
       return json({ error: 'Failed to update onboarding' }, { status: 500 });
-    }
-
-    // refresh session rows so computed fields (flashcards_deck etc.) reflect new level/status
-    try {
-      await refreshSessionForStudent(studentId);
-    } catch (err) {
-      console.warn('[onboarding] refreshSessionForStudent failed:', err);
-      // don't fail the operation if this refresh fails
     }
 
     return json({ success: true, onboarding, student: data });

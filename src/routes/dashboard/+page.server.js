@@ -1,6 +1,5 @@
 // src/routes/dashboard/+page.server.js
 import { redirect } from '@sveltejs/kit';
-import { getUpcomingAppointments } from '$lib/ghl.js';
 import { getSessionById, supabase, getEnrollmentsByStudent } from '$lib/supabase.js';
 
 export async function load({ cookies }) {
@@ -37,7 +36,6 @@ export async function load({ cookies }) {
   };
 
   const tz = cookies.get('tz') || null;
-  const appointments = await getUpcomingAppointments(session.ghl_contact_id, tz);
 
   // Fetch available classes (upcoming classes that match student's level)
   const now = new Date().toISOString();
@@ -180,7 +178,6 @@ export async function load({ cookies }) {
 
   return {
     user,
-    appointments,
     tz,
     availableClasses,
     myClasses,
