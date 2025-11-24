@@ -181,7 +181,7 @@ export async function getSessionById(sessionId) {
   if (!sessionId) return null;
   const { data, error } = await supabase
     .from('session_with_student')
-    .select('id, student_id, first_name, level_key, ghl_contact_id, flashcards_deck, created_at, updated_at')
+    .select('id, student_id, first_name, level_key, ghl_contact_id, flashcards_deck, tz, created_at, updated_at')
     .eq('id', sessionId)
     .single();
 
@@ -196,7 +196,7 @@ export async function getSessionByStudent(studentId) {
   if (!studentId) return null;
   const { data, error } = await supabase
     .from('session_with_student')
-    .select('id, student_id, first_name, level_key, ghl_contact_id, flashcards_deck, created_at, updated_at')
+    .select('id, student_id, first_name, level_key, ghl_contact_id, flashcards_deck, tz, created_at, updated_at')
     .eq('student_id', studentId)
     .order('updated_at', { ascending: false })
     .limit(1);

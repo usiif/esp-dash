@@ -38,8 +38,6 @@ export async function load({ cookies, url }) {
     flashcardsShare
   };
 
-  const tz = cookies.get('tz') || null;
-
   // Fetch available classes (upcoming classes that match student's level)
   // Get start of current week and end of 4 weeks (28 days)
   const today = new Date();
@@ -194,7 +192,6 @@ export async function load({ cookies, url }) {
 
   return {
     user,
-    tz,
     availableClasses,
     myClasses,
     enrolledClassIds: Array.from(enrolledClassIds),

@@ -30,7 +30,6 @@ export async function POST({ request }) {
   const levelKey = payload['Dashboard Level'] || null;
   const portalMagic = payload?.customData?.portal_magic || payload.portal_magic || null;
   const ghlContactId = payload.contact_id || null;
-  const tz = payload.timezone || payload.tz || null;
 
   // If there's nothing to identify the student with, return success (no-op)
   if (!email && !ghlContactId) {
@@ -74,9 +73,8 @@ export async function POST({ request }) {
       level_key: levelKey,
       portal_magic: portalMagic,
       ghl_contact_id: ghlContactId,
-      tz,
       updated_at: new Date().toISOString()
-      // Explicitly NOT including onboarding_status
+      // Explicitly NOT including onboarding_status or tz
     };
 
     const { error } = await supabase

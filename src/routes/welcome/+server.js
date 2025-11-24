@@ -1,11 +1,12 @@
 // src/routes/welcome/+server.js
 import { redirect } from '@sveltejs/kit';
-import { verifyMagicLink, getStudentByEmail, createSession } from '$lib/supabase.js';
+import { verifyMagicLink, getStudentByEmail, createSession, supabase } from '$lib/supabase.js';
 import { getCalendarLink } from '$lib/calendars.js';
 import { getFlashcardLinks } from '$lib/flashcards.js';
 
 export async function GET({ url, cookies }) {
   const token = url.searchParams.get('token');
+  const tz = url.searchParams.get('tz');
 
   console.log('[welcome] Incoming request');
 
@@ -37,6 +38,14 @@ export async function GET({ url, cookies }) {
     email: student.email,
     name: student.full_name
   });
+
+  // 2.5) Update timezone if provided
+  if (tz) {
+    await supabase
+      .from('students')
+      .update({ tz, updated_at: new Date().toISOString() })
+      .eq('id', student.id);
+  }
 
   // 3) Optional resources — for logs / sanity checks only
   const level = student.level_key || null;

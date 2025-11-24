@@ -5,17 +5,27 @@ import { baseLayout, header, footer, button, infoBox, detailsTable, paragraph, c
  */
 function formatDate(isoDate, timezone = 'UTC') {
 	const date = new Date(isoDate);
-	const options = {
+
+	// Format date and time without timezone
+	const dateTimeOptions = {
 		weekday: 'long',
 		year: 'numeric',
 		month: 'long',
 		day: 'numeric',
 		hour: 'numeric',
 		minute: '2-digit',
-		timeZone: timezone,
-		timeZoneName: 'short'
+		timeZone: timezone
 	};
-	return date.toLocaleString('en-US', options);
+	const dateTimeStr = date.toLocaleString('en-US', dateTimeOptions);
+
+	// Get timezone name using Intl.DateTimeFormat
+	const tzName = new Intl.DateTimeFormat('en-US', {
+		timeZone: timezone,
+		timeZoneName: 'long'
+	}).formatToParts(date)
+		.find(part => part.type === 'timeZoneName')?.value || timezone;
+
+	return `${dateTimeStr} (${tzName})`;
 }
 
 /**
@@ -102,7 +112,7 @@ export function classBookingTemplate(data) {
 	const iCalContent = generateICalContent(data);
 	const iCalDataUri = `data:text/calendar;charset=utf-8,${encodeURIComponent(iCalContent)}`;
 
-	const subject = `Class Confirmed: ${className}`;
+	const subject = `✅ Class Confirmed: ${className}`;
 
 	// Plain text version
 	const text = `
@@ -178,7 +188,7 @@ The Expat Spanish Team
 `.trim();
 
 	const html = baseLayout(
-		header('Class Confirmed!') + '\n' + bodyContent + '\n' + footer(),
+		header('✅ Class Confirmed!') + '\n' + bodyContent + '\n' + footer(),
 		{ preheader: `Your spot in ${className} is confirmed!` }
 	);
 

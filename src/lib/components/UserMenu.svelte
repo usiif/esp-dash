@@ -123,7 +123,7 @@
           </a>
   
           <a
-            href="/logout"
+            href="/api/logout"
             class="menu-item mt-1"
             role="menuitem"
             on:click={() => (open = false)}

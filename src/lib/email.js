@@ -131,3 +131,27 @@ export async function sendClassBookingEmail(options) {
 
 	return await sendEmail(studentEmail, subject, text, html);
 }
+
+/**
+ * Send class cancellation confirmation email
+ * @param {object} options - Email options
+ * @param {string} options.studentEmail - Student's email
+ * @param {string} options.studentName - Student's first name
+ * @param {string} options.className - Class title
+ * @param {string} options.teacherName - Teacher's name
+ * @param {string} options.startsAt - ISO date string for class start
+ * @param {number} options.durationMinutes - Class duration
+ * @param {string} options.topic - Class topic
+ * @param {string} options.timezone - Timezone (default: UTC)
+ * @returns {Promise<boolean>} Success status
+ */
+export async function sendClassCancellationEmail(options) {
+	const { studentEmail, ...templateData } = options;
+
+	// Dynamic import to avoid circular dependencies and keep templates separate
+	const { classCancellationTemplate } = await import('./email/templates/index.js');
+
+	const { subject, text, html } = classCancellationTemplate(templateData);
+
+	return await sendEmail(studentEmail, subject, text, html);
+}

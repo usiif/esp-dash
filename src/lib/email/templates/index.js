@@ -4,6 +4,7 @@
  */
 
 export { classBookingTemplate } from './class-booking.js';
+export { classCancellationTemplate } from './class-cancellation.js';
 
 // Add more templates here as needed:
 // export { welcomeTemplate } from './welcome.js';

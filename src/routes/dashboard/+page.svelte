@@ -1,11 +1,25 @@
 <script>
   import { fade } from 'svelte/transition';
+  import { onMount } from 'svelte';
   import StudentNav from '$lib/components/StudentNav.svelte';
   import Onboarding from '$lib/components/onboarding.svelte';
 
   export let data;
 
-  const tz = data.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // One-time timezone update after signup (if missing)
+  onMount(() => {
+    if (data.user.needs_timezone) {
+      fetch('/api/update-timezone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tz })
+      }).catch(err => {
+        console.error('Failed to update timezone:', err);
+      });
+    }
+  });
 
   let showToast = false;
   let toastMessage = '';

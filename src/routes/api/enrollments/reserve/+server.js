@@ -113,6 +113,8 @@ export async function POST({ request, cookies }) {
 
     // Send confirmation email (don't await - fire and forget)
     if (studentData?.email) {
+      const tz = session.tz || 'UTC';
+
       sendClassBookingEmail({
         studentEmail: studentData.email,
         studentName: session.first_name || 'there',
@@ -122,7 +124,7 @@ export async function POST({ request, cookies }) {
         durationMinutes: classData.duration_minutes || 60,
         topic: classData.topic,
         zoomLink: classData.zoom_link,
-        timezone: 'UTC', // TODO: Get from student preferences/cookies
+        timezone: tz,
         classId: class_id
       }).catch(err => {
         console.error('Failed to send booking confirmation email:', err);

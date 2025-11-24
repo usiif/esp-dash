@@ -32,10 +32,9 @@ export async function load({ cookies }) {
     id: session.student_id,
     flashcards_deck: session.flashcards_deck,
     calendarLink,
-    flashcardsShare
+    flashcardsShare,
+    needs_timezone: !session.tz // Flag if timezone is missing
   };
-
-  const tz = cookies.get('tz') || null;
 
   // Fetch available classes (upcoming classes that match student's level)
   const now = new Date().toISOString();
@@ -178,7 +177,6 @@ export async function load({ cookies }) {
 
   return {
     user,
-    tz,
     availableClasses,
     myClasses,
     enrolledClassIds: Array.from(enrolledClassIds),
