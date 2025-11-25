@@ -1,6 +1,6 @@
 // src/routes/api/webhooks/sync-contacts/+server.js
 import { json } from '@sveltejs/kit';
-import { createStudent } from '$lib/supabase.js';
+import { createStudent, supabase } from '$lib/supabase.js';
 import { env } from '$env/dynamic/private';
 
 const WEBHOOK_SECRET = env.WEBHOOK_SECRET;
