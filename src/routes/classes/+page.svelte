@@ -1,12 +1,20 @@
 <script>
   import { fade } from 'svelte/transition';
   import { page } from '$app/stores';
+  import { onMount } from 'svelte';
   import StudentNav from '$lib/components/StudentNav.svelte';
   import Onboarding from '$lib/components/onboarding.svelte';
 
   export let data;
 
-  const tz = data.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // Profile timezone (used for emails/notifications) - from server
+  const profileTz = data.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Viewing timezone (either from URL param or profile) - from server
+  $: viewingTz = data.viewingTz || profileTz;
+
+  // Active timezone for display
+  $: tz = viewingTz;
 
   let showToast = false;
   let toastMessage = '';
@@ -15,6 +23,9 @@
   let enrollingClassId = null;
 
   let enrolledClassIds = new Set(data.enrolledClassIds || []);
+
+  // Store myClasses as a mutable variable so we can update it
+  let myClasses = data.myClasses || [];
 
   // Get user's level number
   const userLevelNum = data.user.level_number ? parseInt(data.user.level_number) : null;
@@ -37,8 +48,8 @@
     window.location.href = url.toString();
   }
 
-  // Create a map of class_id to enrollment info
-  $: enrollmentMap = new Map((data.myClasses || []).map(e => [e.class_id, e]));
+  // Create a map of class_id to enrollment info (reactive based on myClasses)
+  $: enrollmentMap = new Map(myClasses.map(e => [e.class_id, e]));
 
   // Prep status: enrollment_id -> Set of completed prep_item_ids
   // Convert arrays from server to Sets for easier lookups
@@ -48,6 +59,7 @@
   }, {});
 
   // Generate calendar for 4 weeks (current week + 3 more weeks)
+  // This doesn't need to be timezone-aware - we just need the UTC dates
   const today = new Date();
 
   // Get first day of current week (Sunday)
@@ -61,9 +73,8 @@
   const startOfWeek = getStartOfWeek(today);
 
   // Generate all days for the calendar grid (4 weeks = 28 days)
-  function generateCalendarDays() {
+  const calendarDays = (() => {
     const days = [];
-
     // Add 4 weeks (28 days) starting from the beginning of current week
     for (let i = 0; i < 28; i++) {
       const date = new Date(startOfWeek);
@@ -73,13 +84,10 @@
         isCurrentMonth: true // All days are visible/active in 4-week view
       });
     }
-
     return days;
-  }
+  })();
 
-  $: calendarDays = generateCalendarDays();
-
-  // Group classes by date (no client-side filtering needed - server handles it)
+  // Group classes by date (simple grouping, no timezone conversion needed)
   $: classesByDate = (data.availableClasses || []).reduce((acc, classItem) => {
     const dateKey = new Date(classItem.start).toDateString();
     if (!acc[dateKey]) acc[dateKey] = [];
@@ -158,8 +166,20 @@
         return;
       }
 
+      // Update enrolledClassIds
       enrolledClassIds.add(classItem.id);
       enrolledClassIds = enrolledClassIds;
+
+      // Add the new enrollment to myClasses so cancellation works
+      if (result.enrollment) {
+        myClasses = [...myClasses, {
+          enrollment_id: result.enrollment.id,
+          class_id: classItem.id,
+          status: result.enrollment.status,
+          enrolled_at: result.enrollment.enrolled_at,
+          class: classItem
+        }];
+      }
 
       toastMessage = 'Spot reserved successfully!';
       toastType = 'success';
@@ -249,8 +269,12 @@
         return;
       }
 
+      // Remove from enrolledClassIds
       enrolledClassIds.delete(classId);
       enrolledClassIds = enrolledClassIds;
+
+      // Remove from myClasses so it's truly removed from state
+      myClasses = myClasses.filter(e => e.enrollment_id !== enrollmentId);
 
       toastMessage = 'Class cancelled successfully';
       toastType = 'success';
@@ -269,13 +293,120 @@
   }
 
   // Calculate date range for header
-  const endOfRange = new Date(startOfWeek);
-  endOfRange.setDate(startOfWeek.getDate() + 27); // Last day of 4 weeks
+  const endOfRange = (() => {
+    const end = new Date(startOfWeek);
+    end.setDate(startOfWeek.getDate() + 27);
+    return end;
+  })();
 
   function formatDateRange() {
-    const startMonth = startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const endMonth = endOfRange.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const startMonth = startOfWeek.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    });
+    const endMonth = endOfRange.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
     return `${startMonth} - ${endMonth}`;
+  }
+
+  // Common timezones list
+  const commonTimezones = [
+    { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
+    { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
+    { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
+    { value: 'America/Phoenix', label: 'Arizona' },
+    { value: 'America/Anchorage', label: 'Alaska' },
+    { value: 'Pacific/Honolulu', label: 'Hawaii' },
+    { value: 'Europe/London', label: 'London' },
+    { value: 'Europe/Paris', label: 'Paris, Berlin, Madrid' },
+    { value: 'Europe/Istanbul', label: 'Istanbul' },
+    { value: 'Africa/Cairo', label: 'Cairo' },
+    { value: 'Asia/Dubai', label: 'Dubai' },
+    { value: 'Asia/Kolkata', label: 'India' },
+    { value: 'Asia/Bangkok', label: 'Bangkok' },
+    { value: 'Asia/Singapore', label: 'Singapore' },
+    { value: 'Asia/Shanghai', label: 'Beijing, Shanghai' },
+    { value: 'Asia/Tokyo', label: 'Tokyo' },
+    { value: 'Australia/Sydney', label: 'Sydney' },
+    { value: 'Pacific/Auckland', label: 'Auckland' },
+    { value: 'UTC', label: 'UTC' }
+  ];
+
+  let updatingProfileTz = false;
+  let showTzDropdown = false;
+
+  function handleTimezoneSelect(newTz) {
+    showTzDropdown = false;
+
+    const url = new URL(window.location.href);
+
+    if (newTz === profileTz) {
+      // Switching back to profile timezone - remove query param
+      url.searchParams.delete('tz');
+    } else {
+      // Switching to different timezone
+      url.searchParams.set('tz', newTz);
+    }
+
+    // Full page reload with new timezone
+    window.location.href = url.toString();
+  }
+
+  // Get current timezone label
+  function getCurrentLabel() {
+    const current = commonTimezones.find(tz => tz.value === viewingTz);
+    return current ? current.label : viewingTz;
+  }
+
+  // Close dropdown when clicking outside
+  onMount(() => {
+    function handleClickOutside(event) {
+      if (showTzDropdown && !event.target.closest('.timezone-dropdown-container')) {
+        showTzDropdown = false;
+      }
+    }
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  });
+
+  async function updateProfileTimezone() {
+    updatingProfileTz = true;
+    try {
+      const response = await fetch('/api/update-timezone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tz: viewingTz })
+      });
+
+      if (!response.ok) {
+        toastMessage = 'Failed to update profile timezone';
+        toastType = 'error';
+        showToast = true;
+        setTimeout(() => showToast = false, 4000);
+        return;
+      }
+
+      // Update succeeded - reload page to reflect new profile timezone
+      toastMessage = 'Profile timezone updated successfully';
+      toastType = 'success';
+      showToast = true;
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      console.error('Error updating timezone:', err);
+      toastMessage = 'Failed to update profile timezone';
+      toastType = 'error';
+      showToast = true;
+      setTimeout(() => showToast = false, 4000);
+    } finally {
+      updatingProfileTz = false;
+    }
   }
 </script>
 
@@ -297,40 +428,112 @@
             <h1 class="text-2xl font-bold text-gray-900">
               {currentViewLevel} Live Classes
             </h1>
-            <span class="text-sm text-gray-500">({tz})</span>
           </div>
           <p class="text-sm text-gray-600 mt-1">{formatDateRange()}</p>
         </div>
 
-        {#if canShowPreviousLevel}
-          <div class="inline-flex rounded-lg border border-gray-300 bg-white p-1">
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- Timezone Selector -->
+          <div class="relative timezone-dropdown-container">
             <button
-              on:click={() => toggleToLevel(data.user.level)}
-              class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
-              class:bg-orange-500={currentViewLevel === data.user.level}
-              class:text-white={currentViewLevel === data.user.level}
-              class:text-gray-700={currentViewLevel !== data.user.level}
-              class:hover:bg-gray-100={currentViewLevel !== data.user.level}
+              on:click={() => showTzDropdown = !showTzDropdown}
+              class="inline-flex items-center gap-2 pl-9 pr-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
             >
-              {data.user.level}
+              <div class="absolute left-3">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <span>{getCurrentLabel()}</span>
+              <svg class="w-4 h-4 text-gray-500 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
-            <button
-              on:click={() => toggleToLevel(previousLevelName)}
-              class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
-              class:bg-orange-500={currentViewLevel === previousLevelName}
-              class:text-white={currentViewLevel === previousLevelName}
-              class:text-gray-700={currentViewLevel !== previousLevelName}
-              class:hover:bg-gray-100={currentViewLevel !== previousLevelName}
-            >
-              {previousLevelName}
-            </button>
+
+            {#if showTzDropdown}
+              <div
+                class="fixed sm:absolute top-auto sm:top-full left-4 right-4 sm:left-auto sm:right-0 mt-1 w-auto sm:w-80 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-[60vh] overflow-y-auto"
+                on:click|stopPropagation
+              >
+                {#each commonTimezones as timezone}
+                  <button
+                    on:click={() => handleTimezoneSelect(timezone.value)}
+                    class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between gap-2 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                    class:bg-orange-50={timezone.value === viewingTz}
+                  >
+                    <span class="flex-1 truncate">{timezone.label}</span>
+                    {#if timezone.value === profileTz}
+                      <span class="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded flex-shrink-0">Default</span>
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+            {/if}
           </div>
-        {/if}
+
+          <!-- Level Toggle -->
+          {#if canShowPreviousLevel}
+            <div class="inline-flex rounded-lg border border-gray-300 bg-white p-1">
+              <button
+                on:click={() => toggleToLevel(data.user.level)}
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+                class:bg-orange-500={currentViewLevel === data.user.level}
+                class:text-white={currentViewLevel === data.user.level}
+                class:text-gray-700={currentViewLevel !== data.user.level}
+                class:hover:bg-gray-100={currentViewLevel !== data.user.level}
+              >
+                {data.user.level}
+              </button>
+              <button
+                on:click={() => toggleToLevel(previousLevelName)}
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+                class:bg-orange-500={currentViewLevel === previousLevelName}
+                class:text-white={currentViewLevel === previousLevelName}
+                class:text-gray-700={currentViewLevel !== previousLevelName}
+                class:hover:bg-gray-100={currentViewLevel !== previousLevelName}
+              >
+                {previousLevelName}
+              </button>
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
 
+    <!-- Timezone Info Banner -->
+    {#if viewingTz !== profileTz}
+      <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start justify-between gap-3">
+        <div class="flex-1">
+          <p class="text-sm text-blue-900">
+            Viewing times in <span class="font-semibold">{viewingTz}</span>.
+            Want to make this your default?
+            <button
+              on:click={updateProfileTimezone}
+              disabled={updatingProfileTz}
+              class="font-semibold underline hover:text-blue-700 disabled:opacity-50"
+            >
+              {updatingProfileTz ? 'Updating...' : 'Update My Profile Timezone'}
+            </button>
+          </p>
+        </div>
+        <button
+          on:click={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('tz');
+            window.location.href = url.toString();
+          }}
+          class="text-blue-700 hover:text-blue-900 transition-colors flex-shrink-0"
+          title="Switch back to profile timezone"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    {/if}
+
     <!-- Calendar View -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative">
       <!-- Weekday Headers -->
       <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
         {#each ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as day}
@@ -374,15 +577,19 @@
               <div class="space-y-1">
                 {#each dayClasses.slice(0, 4) as classItem}
                   {@const isEnrolled = enrolledClassIds.has(classItem.id)}
+                  {@const isFull = classItem.available_spaces === 0}
                   <button
                     on:click={() => openClassDetails(classItem)}
                     class="w-full text-left px-1.5 py-1 rounded transition-colors"
                     class:bg-green-100={isEnrolled}
                     class:text-green-700={isEnrolled}
                     class:hover:bg-green-200={isEnrolled}
-                    class:bg-orange-100={!isEnrolled}
-                    class:text-orange-700={!isEnrolled}
-                    class:hover:bg-orange-200={!isEnrolled}
+                    class:bg-gray-100={!isEnrolled && isFull}
+                    class:text-gray-500={!isEnrolled && isFull}
+                    class:hover:bg-gray-200={!isEnrolled && isFull}
+                    class:bg-orange-100={!isEnrolled && !isFull}
+                    class:text-orange-700={!isEnrolled && !isFull}
+                    class:hover:bg-orange-200={!isEnrolled && !isFull}
                   >
                     <div class="flex items-center justify-between gap-1">
                       <span class="text-[11px] font-medium truncate">{formatTime(classItem.start)}</span>
@@ -414,6 +621,10 @@
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-green-100 rounded"></div>
         <span class="text-gray-600">Enrolled</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-gray-100 rounded border border-gray-300"></div>
+        <span class="text-gray-600">Full</span>
       </div>
     </div>
   </main>

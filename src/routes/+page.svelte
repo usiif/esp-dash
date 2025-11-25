@@ -15,18 +15,21 @@
 		loading = true;
 		message = '';
 
+		// Normalize email to lowercase
+		const normalizedEmail = email.trim().toLowerCase();
+
 		try {
 			const res = await fetch('/api/send-code', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email })
+				body: JSON.stringify({ email: normalizedEmail })
 			});
 
 			const data = await res.json();
 
 			if (res.ok) {
-				// ✅ Redirect immediately (don’t reset loading)
-				goto(`/verify?email=${encodeURIComponent(email)}`);
+				// ✅ Redirect immediately (don't reset loading)
+				goto(`/verify?email=${encodeURIComponent(normalizedEmail)}`);
 				return; // stop execution before finally runs
 			}
 

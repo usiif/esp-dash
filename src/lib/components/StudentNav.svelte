@@ -68,7 +68,7 @@
 <aside class="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:w-56 lg:bg-white lg:border-r lg:border-gray-200 lg:z-40">
   <!-- Logo -->
   <div class="flex items-center h-14 px-4 border-b border-gray-200">
-    <span class="text-lg font-semibold text-orange-600">📚 ESPL</span>
+   <img src="/Expat Spanish Horizontal Logo .png" alt="ESPL Logo" class="h-8 w-auto" />
   </div>
 
   <!-- Navigation -->

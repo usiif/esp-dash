@@ -1,5 +1,5 @@
 <script>
-  import UserMenu from '$lib/components/UserMenu.svelte';
+  import StudentNav from '$lib/components/StudentNav.svelte';
   export let data;
   const user = data.user;
 
@@ -14,14 +14,9 @@
 </svelte:head>
 
 <div class="min-h-screen bg-orange-50 text-gray-800">
-  <!-- NAVBAR -->
-  <header class="bg-white shadow-sm py-3 px-6 flex justify-between items-center">
-    <h1 class="text-md font-semibold text-orange-600">Expat Spanish Lessons</h1>
+  <StudentNav {user} />
 
-    <UserMenu user={user} />
-  </header>
-
-  <main class="max-w-6xl mx-auto p-6 space-y-6">
+  <main class="lg:ml-56 p-4 sm:p-6 max-w-7xl space-y-6">
     <!-- TOP: Full-width Profile Card -->
     <section class="bg-white p-6 rounded-lg shadow-sm border border-orange-100">
       <div class="flex items-center gap-6">
@@ -40,16 +35,6 @@
               <div class="text-sm text-gray-500">{user.email}</div>
             </div>
 
-            <div class="ml-4 flex items-center gap-3">
-              <a
-                href="/dashboard"
-                class="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded shadow-sm text-sm transition"
-              >
-                ← Dashboard
-              </a>
-
-              
-            </div>
           </div>
 
           <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">

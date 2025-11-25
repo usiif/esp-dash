@@ -11,14 +11,17 @@ export async function POST({ request, cookies }) {
       return json({ error: 'Missing email or code.' }, { status: 400 });
     }
 
+    // Normalize email to lowercase for consistent lookup
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Optional OTP check (uncomment if you use auth_codes flow in supabase)
-    const valid = await verifyCode(email, code);
+    const valid = await verifyCode(normalizedEmail, code);
     if (!valid) return json({ error: 'Invalid code.' }, { status: 401 });
 
     // Look up the student in Supabase (not GHL)
-    const student = await getStudentByEmail(email);
+    const student = await getStudentByEmail(normalizedEmail);
     if (!student || !student.id) {
-      console.warn('[verify-code] student not found for email:', email);
+      console.warn('[verify-code] student not found for email:', normalizedEmail);
       return json({ error: 'Student not found.' }, { status: 404 });
     }
 

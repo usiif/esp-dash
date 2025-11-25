@@ -11,12 +11,15 @@ export async function POST({ request }) {
     return json({ error: 'Enter a valid email address.' }, { status: 400 });
   }
 
+  // Normalize email to lowercase for consistent lookup
+  const normalizedEmail = email.trim().toLowerCase();
+
   try {
     // 2️⃣ Verify student exists in Supabase before sending a code
-    const student = await getStudentByEmail(email);
+    const student = await getStudentByEmail(normalizedEmail);
 
     if (!student || !student.id) {
-      console.warn(`⚠️ Blocked email attempt - student not found: ${email}`);
+      console.warn(`⚠️ Blocked email attempt - student not found: ${normalizedEmail}`);
       return json({ error: "Amigo/a that email is not in our system." }, { status: 404 });
     }
 
@@ -24,7 +27,7 @@ export async function POST({ request }) {
     const code = generateCode();
 
     // 4️⃣ Store in Supabase for verification
-    await storeCode(email, code);
+    await storeCode(normalizedEmail, code);
 
     // 5️⃣ Compose email (use their student name if available)
     const name =
@@ -47,14 +50,14 @@ If you are unable to access your account or have any problems with logging in, p
 - Expat Spanish
     `;
 
-    const sent = await sendEmail(email, subject, body);
+    const sent = await sendEmail(normalizedEmail, subject, body);
 
     if (!sent) {
-      console.error(`❌ Failed to send code to ${email}`);
+      console.error(`❌ Failed to send code to ${normalizedEmail}`);
       return json({ error: 'Failed to send email.' }, { status: 500 });
     }
 
-    console.log(`📩 Code sent successfully to student: ${email}`);
+    console.log(`📩 Code sent successfully to student: ${normalizedEmail}`);
     return json({ success: true });
 
   } catch (err) {

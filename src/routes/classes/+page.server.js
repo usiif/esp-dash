@@ -27,6 +27,10 @@ export async function load({ cookies, url }) {
     ? `https://calendar.expatspanishlessons.com/activate-brainscape-cards/level-${levelNum}`
     : null;
 
+  // Get timezone from query param (for viewing) or session (profile default)
+  const profileTz = session.tz || 'UTC';
+  const viewingTz = url.searchParams.get('tz') || profileTz;
+
   const user = {
     name: session.first_name,
     level: session.level_key,
@@ -35,7 +39,8 @@ export async function load({ cookies, url }) {
     id: session.student_id,
     flashcards_deck: session.flashcards_deck,
     calendarLink,
-    flashcardsShare
+    flashcardsShare,
+    tz: profileTz
   };
 
   // Fetch available classes (upcoming classes that match student's level)
@@ -195,6 +200,8 @@ export async function load({ cookies, url }) {
     availableClasses,
     myClasses,
     enrolledClassIds: Array.from(enrolledClassIds),
-    prepStatus
+    prepStatus,
+    tz: profileTz, // Profile timezone (for emails/notifications)
+    viewingTz: viewingTz // Viewing timezone (from URL param or profile)
   };
 }
