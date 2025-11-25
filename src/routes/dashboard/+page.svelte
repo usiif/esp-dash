@@ -327,6 +327,12 @@
               </div>
             {/each}
           </div>
+
+          <!-- Note about viewing all classes -->
+          <p class="text-xs text-gray-500 text-center">
+            Showing your next 3 classes.
+            <a href="/classes" class="text-orange-600 hover:text-orange-700 underline">View all enrolled classes →</a>
+          </p>
         {:else}
           <!-- No upcoming classes -->
           <div class="bg-white rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
