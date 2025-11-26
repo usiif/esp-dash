@@ -44,15 +44,13 @@ export async function load({ cookies, url }) {
   };
 
   // Fetch available classes (upcoming classes that match student's level)
-  // Get start of current week and end of 4 weeks (28 days)
-  const today = new Date();
-  const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday of current week
+  // Get classes from now onwards for the next 4 weeks (28 days)
+  const now = new Date();
 
-  const end = new Date(startOfWeek);
-  end.setDate(startOfWeek.getDate() + 28); // 4 weeks from start of current week
+  const end = new Date(now);
+  end.setDate(now.getDate() + 28); // 4 weeks from now
 
-  const now = startOfWeek.toISOString();
+  const nowIso = now.toISOString();
   const endIso = end.toISOString();
 
   const { data: classesData, error: classesError } = await supabase
@@ -79,7 +77,7 @@ export async function load({ cookies, url }) {
         is_required
       )
     `)
-    .gte('starts_at', now)
+    .gte('starts_at', nowIso)
     .lte('starts_at', endIso)
     .order('starts_at', { ascending: true });
 

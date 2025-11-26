@@ -10,23 +10,6 @@
   let isSubmitting = $state(false);
   let successMessage = $state('');
   let errorMessage = $state('');
-  let showNotification = $state(false);
-
-  // Show notification after 5 seconds, hide after 35 seconds (30 seconds visible)
-  $effect.root(() => {
-    const showTimer = setTimeout(() => {
-      showNotification = true;
-    }, 5000);
-
-    const hideTimer = setTimeout(() => {
-      showNotification = false;
-    }, 35000);
-
-    return () => {
-      clearTimeout(showTimer);
-      clearTimeout(hideTimer);
-    };
-  });
 
   const categories = [
     { value: 'help', label: 'I need help' },
@@ -38,7 +21,6 @@
 
   function toggleForm() {
     isOpen = !isOpen;
-    showNotification = false; // Hide notification when opening form
     // Reset form when closing
     if (!isOpen) {
       category = '';
@@ -47,10 +29,6 @@
       successMessage = '';
       errorMessage = '';
     }
-  }
-
-  function dismissNotification() {
-    showNotification = false;
   }
 
   async function submitForm() {
@@ -98,51 +76,6 @@
     }
   }
 </script>
-
-<!-- Notification Tooltip -->
-{#if showNotification && !isOpen}
-  <div
-    class="fixed bottom-24 right-6 bg-white rounded-lg shadow-xl p-4 w-80 max-w-[calc(100vw-3rem)] z-50"
-    transition:fly={{ y: 10, duration: 300 }}
-  >
-    <button
-      on:click={dismissNotification}
-      class="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-      aria-label="Dismiss notification"
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
-
-    <div class="flex items-start gap-3 mb-3">
-      <img
-        src="/Amy-avatar.png"
-        alt="Amy"
-        class="w-16 h-16 object-cover flex-shrink-0"
-      />
-      <p class="text-sm text-gray-800 pt-2">
-        <span class="font-medium">Hola, {userName}!</span><br/>
-        Do you need any help?
-      </p>
-    </div>
-
-    <div class="flex gap-2">
-      <button
-        on:click={toggleForm}
-        class="flex-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors"
-      >
-        Yes
-      </button>
-      <button
-        on:click={dismissNotification}
-        class="flex-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
-      >
-        No, thank you
-      </button>
-    </div>
-  </div>
-{/if}
 
 <!-- Support Bubble Button -->
 {#if !isOpen}
