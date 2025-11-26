@@ -15,6 +15,13 @@ export async function load({ cookies }) {
   // Extract number from "Level 4" → "4"
   const levelNum = session.level_key?.match(/\d+/)?.[0] ?? null;
 
+  // Get student email
+  const { data: studentData } = await supabase
+    .from('students')
+    .select('email')
+    .eq('id', session.student_id)
+    .single();
+
   // Build URLs inline
   const calendarLink = levelNum
     ? `https://calendar.expatspanishlessons.com/live-classes/level-${levelNum}`
@@ -26,6 +33,7 @@ export async function load({ cookies }) {
 
   const user = {
     name: session.first_name,
+    email: studentData?.email || '',
     level: session.level_key,
     level_number: levelNum,
     ghl_id: session.ghl_contact_id,
