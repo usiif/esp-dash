@@ -55,13 +55,22 @@
     return result;
   })();
 
-  // Group events by date
+  // Group events by date (using CST timezone)
   $: eventsByDate = (() => {
     const map = {};
     events.forEach(ev => {
       if (!ev.start) return;
       const date = new Date(ev.start);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      // Get date in CST timezone
+      const cstDateStr = date.toLocaleDateString('en-US', {
+        timeZone: 'America/Chicago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      // Convert MM/DD/YYYY to YYYY-MM-DD
+      const [month, day, year] = cstDateStr.split('/');
+      const key = `${year}-${month}-${day}`;
       if (!map[key]) map[key] = [];
       map[key].push(ev);
     });
@@ -78,11 +87,13 @@
 
   function formatTime(isoString) {
     const date = new Date(isoString);
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${String(minutes).padStart(2, '0')}${ampm}`;
+    // Format time in CST timezone
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: 'America/Chicago'
+    });
+    return timeStr;
   }
 
   function isToday(date) {
@@ -135,9 +146,9 @@
   }
 </script>
 
-<div class="flex flex-col h-full bg-white rounded-lg shadow-sm border" style="height: {calendarHeight};">
+<div class="flex flex-col h-full" style="height: {calendarHeight};">
   <!-- Header with controls -->
-  <div class="flex items-center justify-between p-4 border-b flex-shrink-0">
+  <div class="flex items-center justify-between p-4 bg-white border-b rounded-t-lg flex-shrink-0 shadow-sm border border-gray-200">
     <div class="flex items-center gap-3">
       <button
         on:click={prev}
@@ -161,6 +172,7 @@
 
     <div class="text-sm font-medium text-gray-700">
       {displayRange}
+      <span class="ml-2 text-xs text-gray-500">(CST)</span>
     </div>
 
     <div class="flex items-center gap-2">
@@ -174,7 +186,7 @@
   </div>
 
   <!-- Calendar grid -->
-  <div class="flex-1 overflow-auto p-4">
+  <div class="flex-1 overflow-auto p-4 bg-white rounded-b-lg shadow-sm border-l border-r border-b border-gray-200">
     {#if viewMode === 'week'}
       <!-- Week View - Detailed -->
       <div class="grid grid-cols-7 gap-3 min-h-full">
@@ -259,7 +271,7 @@
     </div>
 
     {:else}
-      <!-- Month View - Minimal -->
+      <!-- Month View - Enhanced with Color Coding -->
       <div class="space-y-2">
         <!-- Weekday headers -->
         <div class="grid grid-cols-7 gap-2 mb-2">
@@ -270,6 +282,22 @@
           {/each}
         </div>
 
+        <!-- Legend -->
+        <div class="flex items-center gap-4 text-xs text-gray-600 mb-2 px-2">
+          <div class="flex items-center gap-1.5">
+            <div class="w-3 h-3 rounded bg-green-100 border border-green-300"></div>
+            <span>Available</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-3 h-3 rounded bg-yellow-100 border border-yellow-300"></div>
+            <span>Filling up</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-3 h-3 rounded bg-red-100 border border-red-300"></div>
+            <span>Full</span>
+          </div>
+        </div>
+
         <!-- Month grid (4 weeks) -->
         <div class="grid grid-cols-7 gap-2">
           {#each monthDays as { date, isCurrentMonth }}
@@ -278,37 +306,54 @@
             {@const today = isToday(date)}
 
             <div
-              class="border rounded-lg p-2 min-h-[100px] flex flex-col bg-white"
+              class="border rounded-lg p-2 flex flex-col bg-white"
               class:ring-2={today}
               class:ring-orange-500={today}
               class:bg-orange-50={today}
+              style="min-height: {Math.max(120, dayEvents.length * 28 + 40)}px"
             >
               <!-- Date number -->
               <div
-                class="text-sm font-semibold mb-1"
+                class="text-sm font-semibold mb-2 sticky top-0 bg-white pb-1"
                 class:text-orange-600={today}
                 class:text-gray-900={!today}
+                class:bg-orange-50={today}
               >
                 {date.getDate()}
               </div>
 
-              <!-- Events (minimal) -->
-              <div class="space-y-0.5 flex-1 overflow-hidden">
-                {#each dayEvents.slice(0, 4) as ev}
+              <!-- Events (show all with color coding) -->
+              <div class="space-y-1 flex-1">
+                {#each dayEvents as ev}
+                  {@const fillPercentage = ev.capacity > 0 ? (ev.enrolled / ev.capacity) : 0}
+                  {@const isFull = fillPercentage >= 1}
+                  {@const isFillingUp = fillPercentage >= 0.7}
+
                   <button
                     on:click={() => openEvent(ev)}
-                    class="w-full text-left px-1.5 py-0.5 rounded text-[10px] hover:bg-gray-100 truncate"
-                    title="{formatTime(ev.start)} - {ev.title}"
+                    class="w-full text-left px-2 py-1.5 rounded text-[10px] border transition-all hover:shadow-sm cursor-pointer"
+                    class:bg-red-50={isFull}
+                    class:border-red-300={isFull}
+                    class:text-red-900={isFull}
+                    class:bg-yellow-50={!isFull && isFillingUp}
+                    class:border-yellow-300={!isFull && isFillingUp}
+                    class:text-yellow-900={!isFull && isFillingUp}
+                    class:bg-green-50={!isFull && !isFillingUp}
+                    class:border-green-300={!isFull && !isFillingUp}
+                    class:text-green-900={!isFull && !isFillingUp}
+                    title="{formatTime(ev.start)} - {ev.title}\n{ev.enrolled}/{ev.capacity} enrolled\nLevels: {ev.levels.join(', ')}"
                   >
-                    <span class="font-medium">{formatTime(ev.start).replace(':00', '').replace(' ', '')}</span>
-                    <span class="text-gray-600 ml-1">{ev.title}</span>
+                    <div class="flex items-center justify-between gap-1 mb-0.5">
+                      <span class="font-semibold">{formatTime(ev.start).replace(':00', '').replace(' ', '')}</span>
+                      <span class="text-[9px] font-medium px-1 py-0.5 bg-white rounded">
+                        {ev.enrolled}/{ev.capacity}
+                      </span>
+                    </div>
+                    <div class="font-medium truncate">
+                      {ev.title}
+                    </div>
                   </button>
                 {/each}
-                {#if dayEvents.length > 4}
-                  <div class="text-[10px] text-gray-500 px-1.5">
-                    +{dayEvents.length - 4} more
-                  </div>
-                {/if}
               </div>
             </div>
           {/each}

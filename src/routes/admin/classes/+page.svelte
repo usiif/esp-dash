@@ -4,12 +4,12 @@
     export let data;
   
     let events = data.events || [];
-  
+
     // panel state
     let panelOpen = false;
     let panelMode = 'event'; // 'event' | 'date'
     let panelData = null;
-  
+
     // toast state
     let showToast = false;
     let toastMessage = '';
@@ -18,6 +18,69 @@
     // confirmation dialog state
     let showConfirmDialog = false;
     let confirmDialogData = null;
+
+    // filter states
+    let selectedLevel = '';
+    let selectedTeacher = '';
+    let selectedClassType = '';
+    let searchQuery = '';
+
+    // Extract unique levels, teachers, and class types for filter dropdowns
+    $: allLevels = (() => {
+      const levels = new Set();
+      events.forEach(evt => {
+        if (evt.levels && evt.levels.length > 0) {
+          evt.levels.forEach(l => levels.add(l));
+        }
+      });
+      return Array.from(levels).sort();
+    })();
+
+    $: allTeachers = (() => {
+      const teachers = new Set();
+      events.forEach(evt => {
+        if (evt.teacher) teachers.add(evt.teacher);
+      });
+      return Array.from(teachers).sort();
+    })();
+
+    $: allClassTypes = (() => {
+      const types = new Set();
+      events.forEach(evt => {
+        if (evt.class_type) types.add(evt.class_type);
+      });
+      return Array.from(types).sort();
+    })();
+
+    // Filter events based on selected filters
+    $: filteredEvents = events.filter(evt => {
+      // Level filter
+      if (selectedLevel && evt.levels && evt.levels.length > 0) {
+        if (!evt.levels.includes(selectedLevel)) return false;
+      }
+
+      // Teacher filter
+      if (selectedTeacher && evt.teacher !== selectedTeacher) return false;
+
+      // Class type filter
+      if (selectedClassType && evt.class_type !== selectedClassType) return false;
+
+      // Search query (searches title, topic, description, teacher, class type)
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = evt.title?.toLowerCase().includes(query);
+        const matchesTopic = evt.topic?.toLowerCase().includes(query);
+        const matchesDescription = evt.description?.toLowerCase().includes(query);
+        const matchesTeacher = evt.teacher?.toLowerCase().includes(query);
+        const matchesClassType = evt.class_type?.toLowerCase().includes(query);
+
+        if (!matchesTitle && !matchesTopic && !matchesDescription && !matchesTeacher && !matchesClassType) {
+          return false;
+        }
+      }
+
+      return true;
+    });
   
     function showSuccessToast(message) {
       toastMessage = message;
@@ -222,17 +285,107 @@
     <title>Admin — Classes</title>
   </svelte:head>
   
-  <div class="h-screen bg-gray-50 flex flex-col overflow-hidden">
+  <div class="h-screen flex flex-col overflow-hidden">
     <div class="flex-shrink-0 max-w-[1800px] w-full mx-auto px-6 py-6">
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-semibold text-gray-900">Classes Calendar</h1>
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h1 class="text-2xl font-semibold text-gray-900">Classes Calendar</h1>
+          <p class="text-xs text-gray-500 mt-1">All times displayed in Central Standard Time (CST)</p>
+        </div>
         <div class="text-sm text-gray-600">Click a class to view or edit details</div>
       </div>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-3 mb-4">
+        <!-- Search Input -->
+        <div class="flex-1 min-w-[200px]">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              bind:value={searchQuery}
+              placeholder="Search classes, topics, teachers..."
+              class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            />
+          </div>
+        </div>
+
+        <!-- Level Filter -->
+        <div class="w-auto min-w-[140px]">
+          <select
+            bind:value={selectedLevel}
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none bg-white"
+          >
+            <option value="">All Levels</option>
+            {#each allLevels as level}
+              <option value={level}>{level}</option>
+            {/each}
+          </select>
+        </div>
+
+        <!-- Teacher Filter -->
+        <div class="w-auto min-w-[140px]">
+          <select
+            bind:value={selectedTeacher}
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none bg-white"
+          >
+            <option value="">All Teachers</option>
+            {#each allTeachers as teacher}
+              <option value={teacher}>{teacher}</option>
+            {/each}
+          </select>
+        </div>
+
+        <!-- Class Type Filter -->
+        <div class="w-auto min-w-[180px]">
+          <select
+            bind:value={selectedClassType}
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none bg-white"
+          >
+            <option value="">All Class Types</option>
+            {#each allClassTypes as classType}
+              <option value={classType}>{classType}</option>
+            {/each}
+          </select>
+        </div>
+
+        <!-- Clear Filters Button -->
+        {#if selectedLevel || selectedTeacher || selectedClassType || searchQuery}
+          <button
+            on:click={() => {
+              selectedLevel = '';
+              selectedTeacher = '';
+              selectedClassType = '';
+              searchQuery = '';
+            }}
+            class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear
+          </button>
+        {/if}
+      </div>
+
+      <!-- Results count -->
+      {#if selectedLevel || selectedTeacher || selectedClassType || searchQuery}
+        <div class="text-sm text-gray-600 mb-2">
+          Showing {filteredEvents.length} {filteredEvents.length === 1 ? 'class' : 'classes'}
+          <span class="text-gray-500">
+            (filtered from {events.length} total)
+          </span>
+        </div>
+      {/if}
     </div>
 
     <div class="flex-1 max-w-[1800px] w-full mx-auto px-6 pb-6 overflow-hidden">
       <AdminCalendar
-        {events}
+        events={filteredEvents}
         calendarHeight="100%"
         on:open={handleOpen}
         on:create={handleCreate}

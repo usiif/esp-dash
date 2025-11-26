@@ -7,7 +7,7 @@
     import { fade } from 'svelte/transition';
 
     export let data;
-    const students = data.students || [];
+    let students = data.students || [];
     const page = data.page || 1;
     const per_page = data.per_page || 50;
     const total = data.total || 0;
@@ -19,6 +19,8 @@
     let selectedStudent = null;
     let studentEnrollments = [];
     let loadingEnrollments = false;
+    let searchQuery = data.search || '';
+    let searchTimeout;
 
     function badgeClass(status) {
       switch ((status || '').toString().toLowerCase()) {
@@ -36,12 +38,42 @@
       return (fullName || 'S').slice(0, 1).toUpperCase();
     }
 
-    const pageUrl = (p) => `/admin/students?page=${p}&per_page=${per_page}`;
+    function performSearch() {
+      const params = new URLSearchParams();
+      if (searchQuery.trim()) {
+        params.set('search', searchQuery.trim());
+      }
+      params.set('page', '1'); // Reset to first page on new search
+      params.set('per_page', per_page.toString());
+      window.location.href = `/admin/students?${params.toString()}`;
+    }
 
-    // Simpler navigation that works better with Firefox
-    function goTo(p) {
-      if (p < 1 || p > totalPages) return;
-      window.location.href = pageUrl(p);
+    function handleKeydown(event) {
+      if (event.key === 'Enter') {
+        performSearch();
+      }
+    }
+
+    function clearSearch() {
+      searchQuery = '';
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('per_page', per_page.toString());
+      window.location.href = `/admin/students?${params.toString()}`;
+    }
+
+    function pageUrl(pageNum) {
+      const params = new URLSearchParams();
+      params.set('page', pageNum.toString());
+      params.set('per_page', per_page.toString());
+      if (searchQuery.trim()) {
+        params.set('search', searchQuery.trim());
+      }
+      return `/admin/students?${params.toString()}`;
+    }
+
+    function goTo(pageNum) {
+      window.location.href = pageUrl(pageNum);
     }
 
     async function openStudentDetails(student) {
@@ -83,39 +115,45 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="text-lg font-semibold text-gray-800">Students</h3>
-        <div class="text-sm text-gray-500">{total} total • Showing {startIndex}–{endIndex}</div>
-      </div>
-  
-      <!-- Pagination (top): compact arrow buttons -->
-      <div class="flex items-center gap-3">
-        <button
-          class="p-2 rounded-md border border-orange-100 bg-white hover:bg-orange-50 transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-          on:click={() => goTo(page - 1)}
-          aria-label="Previous page"
-          disabled={page <= 1}
-        >
-          <svg class="w-5 h-5 text-gray-700" viewBox="0 0 20 20" fill="none">
-            <path d="M12 15l-5-5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-  
-        <div class="px-3 py-2 text-sm text-gray-700">
-          Page <span class="font-semibold">{page}</span> / <span class="font-semibold">{totalPages}</span>
+        <div class="text-sm text-gray-500">
+          {#if searchQuery.trim()}
+            Showing {startIndex}-{endIndex} of {total} result{total === 1 ? '' : 's'}
+          {:else}
+            Showing {startIndex}-{endIndex} of {total} total student{total === 1 ? '' : 's'}
+          {/if}
         </div>
-  
-        <button
-          class="p-2 rounded-md border border-orange-100 bg-white hover:bg-orange-50 transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-          on:click={() => goTo(page + 1)}
-          aria-label="Next page"
-          disabled={page >= totalPages}
-        >
-          <svg class="w-5 h-5 text-gray-700" viewBox="0 0 20 20" fill="none">
-            <path d="M8 5l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
       </div>
     </div>
-  
+
+    <!-- Search Bar -->
+    <div class="mb-4">
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          bind:value={searchQuery}
+          on:keydown={handleKeydown}
+          placeholder="Search by name or email (press Enter)..."
+          class="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+        />
+        {#if searchQuery.trim()}
+          <button
+            on:click={clearSearch}
+            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            aria-label="Clear search"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        {/if}
+      </div>
+    </div>
+
     <div class="bg-white rounded-lg shadow-sm border border-orange-100 overflow-x-auto">
       <table class="min-w-full text-sm">
         <thead class="bg-orange-50">
@@ -131,7 +169,9 @@
         <tbody>
           {#if students.length === 0}
             <tr>
-              <td class="px-4 py-6 text-center text-gray-500" colspan="5">No students found.</td>
+              <td class="px-4 py-6 text-center text-gray-500" colspan="5">
+                {searchQuery.trim() ? 'No students match your search.' : 'No students found.'}
+              </td>
             </tr>
           {:else}
             {#each students as s}
@@ -177,39 +217,33 @@
         </tbody>
       </table>
     </div>
-  
-    <!-- bottom pagination -->
-    <div class="mt-4 flex items-center justify-between">
-      <div class="text-sm text-gray-500">Showing {startIndex}–{endIndex} of {total}</div>
-  
-      <div class="flex items-center gap-3">
-        <button
-          class="p-2 rounded-md border border-orange-100 bg-white hover:bg-orange-50 transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-          on:click={() => goTo(page - 1)}
-          aria-label="Previous page"
-          disabled={page <= 1}
-        >
-          <svg class="w-5 h-5 text-gray-700" viewBox="0 0 20 20" fill="none">
-            <path d="M12 15l-5-5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-  
-        <div class="px-3 py-2 text-sm text-gray-700">
-          Page <span class="font-semibold">{page}</span> / <span class="font-semibold">{totalPages}</span>
+
+    <!-- Pagination -->
+    {#if totalPages > 1}
+      <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm text-gray-600">
+          Page {page} of {totalPages}
         </div>
-  
-        <button
-          class="p-2 rounded-md border border-orange-100 bg-white hover:bg-orange-50 transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-          on:click={() => goTo(page + 1)}
-          aria-label="Next page"
-          disabled={page >= totalPages}
-        >
-          <svg class="w-5 h-5 text-gray-700" viewBox="0 0 20 20" fill="none">
-            <path d="M8 5l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="flex gap-2">
+          {#if page > 1}
+            <button
+              on:click={() => goTo(page - 1)}
+              class="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50 text-sm font-medium"
+            >
+              ← Previous
+            </button>
+          {/if}
+          {#if page < totalPages}
+            <button
+              on:click={() => goTo(page + 1)}
+              class="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50 text-sm font-medium"
+            >
+              Next →
+            </button>
+          {/if}
+        </div>
       </div>
-    </div>
+    {/if}
   </div>
 
   <!-- Student Details Modal -->

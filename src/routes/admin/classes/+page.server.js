@@ -26,7 +26,7 @@ export async function load({ cookies }) {
   end.setDate(end.getDate() + 90);
   const endIso = end.toISOString();
 
-  // select teacher via foreign table (team)
+  // select teacher via foreign table (team) and class_type
   const { data, error } = await supabase
     .from('classes')
     .select(`
@@ -41,7 +41,9 @@ export async function load({ cookies }) {
       zoom_link,
       recording_link,
       notes,
-      teacher:team(id, full_name, email)
+      class_type_id,
+      teacher:team(id, full_name, email),
+      class_type:class_types(id, title)
     `)
     .gte('starts_at', startIso)
     .lte('starts_at', endIso)
@@ -89,6 +91,8 @@ export async function load({ cookies }) {
       levels: Array.isArray(r.levels) ? r.levels : (r.levels ? [r.levels] : []),
       teacher: r.teacher ? r.teacher.full_name || r.teacher.email : null,
       teacher_id: r.teacher ? r.teacher.id : null,
+      class_type: r.class_type ? r.class_type.title : null,
+      class_type_id: r.class_type_id || null,
       zoom_link: r.zoom_link || null,
       recording_link: r.recording_link || null,
       notes: r.notes || null,

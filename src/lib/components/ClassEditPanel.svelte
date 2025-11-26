@@ -8,6 +8,31 @@
 
     const dispatch = createEventDispatcher();
 
+    // Convert ISO timestamp to datetime-local format when panel data changes
+    $: if (panelData && panelData.start && panelData.start.includes('T') && panelData.start.length > 16) {
+      // Check if it's a full ISO string (not already in datetime-local format)
+      const dateObj = new Date(panelData.start);
+      if (!isNaN(dateObj.getTime())) {
+        // Convert to CST timezone for display
+        const cstDatetime = dateObj.toLocaleString('en-US', {
+          timeZone: 'America/Chicago',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+
+        // Parse the CST datetime string and format for datetime-local input
+        const [datePart, timePart] = cstDatetime.split(', ');
+        const [month, day, year] = datePart.split('/');
+        const [hour, minute] = timePart.split(':');
+
+        panelData.start = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+      }
+    }
+
     // Tab state for event mode
     let activeTab = 'info'; // 'info' | 'students' | 'prep'
 
@@ -335,12 +360,16 @@
   
               <!-- Start Date & Time -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date & Time</label>
-                <input 
-                  type="datetime-local" 
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date & Time
+                  <span class="text-xs text-gray-500 font-normal ml-1">(CST)</span>
+                </label>
+                <input
+                  type="datetime-local"
                   bind:value={panelData.start}
                   class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
+                <p class="text-xs text-gray-500 mt-1">All times are in Central Standard Time (CST)</p>
               </div>
   
               <!-- Duration -->
