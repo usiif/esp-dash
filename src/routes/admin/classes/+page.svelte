@@ -1,6 +1,7 @@
 <script>
     import AdminCalendar from '$lib/components/AdminCalendar.svelte';
     import ClassEditPanel from '$lib/components/ClassEditPanel.svelte';
+    import { fromZonedTime } from 'date-fns-tz';
     export let data;
   
     let events = data.events || [];
@@ -88,12 +89,23 @@
       showToast = true;
       setTimeout(() => showToast = false, 3000);
     }
-  
+
     function showErrorToast(message) {
       toastMessage = message;
       toastType = 'error';
       showToast = true;
       setTimeout(() => showToast = false, 4000);
+    }
+
+    // Convert datetime-local value (interpreted as CST) to UTC ISO string
+    function convertCSTToUTC(datetimeLocal) {
+      // datetimeLocal is like "2025-01-15T09:00"
+      // We need to interpret this as America/Chicago time and convert to UTC
+
+      // Parse the datetime-local value and treat it as a local time in America/Chicago
+      const utcDate = fromZonedTime(datetimeLocal, 'America/Chicago');
+
+      return utcDate.toISOString();
     }
   
     function handleOpen(e) {
@@ -149,8 +161,10 @@
         const isNewClass = classData.id === null;
         const endpoint = isNewClass ? '/api/classes/create' : '/api/classes/update';
 
-        // Convert datetime-local to ISO for API
-        const startsAtIso = new Date(classData.start).toISOString();
+        // Convert datetime-local (CST) to ISO (UTC) for API
+        // The datetime-local value is like "2025-01-15T09:00"
+        // We need to interpret this as CST time and convert to UTC
+        const startsAtIso = convertCSTToUTC(classData.start);
 
         const payload = isNewClass
           ? {

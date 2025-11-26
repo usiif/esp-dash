@@ -162,7 +162,7 @@
             <th class="text-left px-4 py-3">Email</th>
             <th class="text-left px-4 py-3">Level</th>
             <th class="text-left px-4 py-3">Onboarding</th>
-            <th class="text-left px-4 py-3">Timezone</th>
+            <th class="text-left px-4 py-3">GHL</th>
           </tr>
         </thead>
   
@@ -209,7 +209,22 @@
                 </td>
 
                 <td class="px-4 py-3">
-                  <div class="text-sm text-gray-700">{s.tz}</div>
+                  {#if s.ghl_contact_id}
+                    <a
+                      href="https://app.gohighlevel.com/v2/location/Wpw7KRwapxKDboseXO64/contacts/detail/{s.ghl_contact_id}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      on:click={(e) => e.stopPropagation()}
+                      class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+                    >
+                      View
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  {:else}
+                    <span class="text-xs text-gray-400">—</span>
+                  {/if}
                 </td>
               </tr>
             {/each}
@@ -246,44 +261,56 @@
     {/if}
   </div>
 
-  <!-- Student Details Modal -->
+  <!-- Student Details Panel -->
   {#if selectedStudent}
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
-      on:click={closeModal}
+      class="fixed right-0 top-0 h-full w-[500px] bg-white shadow-2xl overflow-y-auto z-50 border-l border-gray-200"
       transition:fade
+      style="animation: slideInRight 0.3s ease-out;"
     >
-      <div
-        class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
-        on:click|stopPropagation
-      >
-        <!-- Modal Header -->
-        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            {#if selectedStudent.profile_pic}
-              <img src={selectedStudent.profile_pic} alt="avatar" class="w-12 h-12 rounded-full object-cover" />
-            {:else}
-              <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-semibold text-lg uppercase">
-                {avatarInitial(selectedStudent.full_name)}
+        <!-- Panel Header -->
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              {#if selectedStudent.profile_pic}
+                <img src={selectedStudent.profile_pic} alt="avatar" class="w-12 h-12 rounded-full object-cover" />
+              {:else}
+                <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-semibold text-lg uppercase">
+                  {avatarInitial(selectedStudent.full_name)}
+                </div>
+              {/if}
+              <div>
+                <h3 class="text-lg font-bold text-gray-900">{selectedStudent.full_name}</h3>
+                <p class="text-sm text-gray-600">{selectedStudent.email}</p>
               </div>
-            {/if}
-            <div>
-              <h3 class="text-lg font-bold text-gray-900">{selectedStudent.full_name}</h3>
-              <p class="text-sm text-gray-600">{selectedStudent.email}</p>
             </div>
+            <button
+              on:click={closeModal}
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <button
-            on:click={closeModal}
-            class="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+
+          {#if selectedStudent.ghl_contact_id}
+            <a
+              href="https://app.gohighlevel.com/v2/location/Wpw7KRwapxKDboseXO64/contacts/detail/{selectedStudent.ghl_contact_id}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open in GHL
+            </a>
+          {/if}
         </div>
 
-        <!-- Modal Content -->
-        <div class="px-6 py-4">
+        <!-- Panel Content -->
+        <div class="px-6 py-6">
           <!-- Student Info -->
           <div class="grid grid-cols-2 gap-4 mb-6">
             <div>
@@ -355,8 +382,8 @@
           </div>
         </div>
 
-        <!-- Modal Footer -->
-        <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+        <!-- Panel Footer -->
+        <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
           <button
             on:click={closeModal}
             class="w-full px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded hover:bg-gray-700 transition-colors"
@@ -364,6 +391,16 @@
             Close
           </button>
         </div>
-      </div>
     </div>
   {/if}
+
+  <style>
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+      }
+      to {
+        transform: translateX(0);
+      }
+    }
+  </style>

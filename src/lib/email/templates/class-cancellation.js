@@ -3,33 +3,27 @@
  */
 
 import { baseLayout, header, paragraph, detailsTable, link, caption, footer } from './base.js';
+import { format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 
 /**
  * Format a date/time for display in email
  */
 function formatDate(isoString, timezone = 'UTC') {
   const date = new Date(isoString);
+  const zonedDate = toZonedTime(date, timezone);
 
-  // Format date and time without timezone
-  const dateTimeOptions = {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: timezone
-  };
-  const dateTimeStr = date.toLocaleString('en-US', dateTimeOptions);
+  // Format: "Thursday, January 16, 2025 at 1:00 PM"
+  const formattedDate = format(zonedDate, "EEEE, MMMM d, yyyy 'at' h:mm a");
 
-  // Get timezone name using Intl.DateTimeFormat
+  // Get timezone abbreviation
   const tzName = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
-    timeZoneName: 'long'
+    timeZoneName: 'short'
   }).formatToParts(date)
     .find(part => part.type === 'timeZoneName')?.value || timezone;
 
-  return `${dateTimeStr} (${tzName})`;
+  return `${formattedDate} (${tzName})`;
 }
 
 /**

@@ -16,7 +16,7 @@ export async function load({ url }) {
     let countQuery = supabase.from('students').select('id', { head: true, count: 'exact' });
     let dataQuery = supabase
       .from('students')
-      .select('id, full_name, first_name, last_name, email, level_key, onboarding_status, tz, profile_pic');
+      .select('id, full_name, first_name, last_name, email, level_key, onboarding_status, tz, profile_pic, ghl_contact_id');
 
     // Apply search filter if provided
     if (searchQuery.trim()) {
@@ -49,7 +49,8 @@ export async function load({ url }) {
       level_key: s.level_key || '—',
       onboarding_status: s.onboarding_status || 'pending',
       tz: s.tz || '—',
-      profile_pic: s.profile_pic || null
+      profile_pic: s.profile_pic || null,
+      ghl_contact_id: s.ghl_contact_id || null
     }));
 
     return { students, page, per_page, total: total ?? 0, search: searchQuery };

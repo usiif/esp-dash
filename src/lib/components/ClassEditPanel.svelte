@@ -40,6 +40,14 @@
     let enrolledStudents = [];
     let loadingStudents = false;
 
+    // Add student state
+    let allStudents = [];
+    let loadingAllStudents = false;
+    let selectedStudent = null;
+    let searchStudentQuery = '';
+    let showDropdown = false;
+    let dropdownFocusIndex = -1;
+
     // Prep items data
     let prepItems = [];
     let loadingPrepItems = false;
@@ -194,6 +202,133 @@
       }
     }
 
+    async function cancelEnrollment(enrollmentId) {
+      if (!confirm('Are you sure you want to cancel this student\'s enrollment?')) return;
+
+      try {
+        const response = await fetch(`/api/enrollments/${enrollmentId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          // Remove from local state
+          enrolledStudents = enrolledStudents.filter(e => e.id !== enrollmentId);
+          // Update capacity count
+          if (panelData) {
+            panelData.enrolled = Math.max(0, (panelData.enrolled || 0) - 1);
+          }
+        } else {
+          const error = await response.json();
+          alert('Failed to cancel enrollment: ' + (error.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error('Error canceling enrollment:', err);
+        alert('Error canceling enrollment');
+      }
+    }
+
+    async function fetchAllStudents() {
+      if (allStudents.length > 0) return; // Already loaded
+
+      loadingAllStudents = true;
+      try {
+        const response = await fetch('/api/admin/students/all');
+        if (response.ok) {
+          const data = await response.json();
+          allStudents = data.students || [];
+        } else {
+          console.error('Failed to fetch students');
+        }
+      } catch (err) {
+        console.error('Error fetching students:', err);
+      } finally {
+        loadingAllStudents = false;
+      }
+    }
+
+    async function bookStudent() {
+      if (!selectedStudent || !panelData?.id) return;
+
+      try {
+        const response = await fetch(`/api/classes/${panelData.id}/enroll`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: selectedStudent.id })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Refresh enrolled students list
+          await fetchEnrolledStudents();
+          // Update capacity count
+          if (panelData) {
+            panelData.enrolled = (panelData.enrolled || 0) + 1;
+          }
+          // Reset selection
+          selectedStudent = null;
+          searchStudentQuery = '';
+          showDropdown = false;
+        } else {
+          const error = await response.json();
+          alert('Failed to book student: ' + (error.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error('Error booking student:', err);
+        alert('Error booking student');
+      }
+    }
+
+    function selectStudentFromDropdown(student) {
+      selectedStudent = student;
+      searchStudentQuery = `${student.first_name || ''} ${student.last_name || ''} (${student.email})`.trim();
+      showDropdown = false;
+      dropdownFocusIndex = -1;
+    }
+
+    function handleSearchInput() {
+      if (searchStudentQuery.length >= 3) {
+        showDropdown = true;
+        selectedStudent = null;
+      } else {
+        showDropdown = false;
+        selectedStudent = null;
+      }
+    }
+
+    function handleSearchKeydown(e) {
+      if (!showDropdown || filteredStudents.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        dropdownFocusIndex = Math.min(dropdownFocusIndex + 1, filteredStudents.length - 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        dropdownFocusIndex = Math.max(dropdownFocusIndex - 1, -1);
+      } else if (e.key === 'Enter' && dropdownFocusIndex >= 0) {
+        e.preventDefault();
+        selectStudentFromDropdown(filteredStudents[dropdownFocusIndex]);
+      } else if (e.key === 'Escape') {
+        showDropdown = false;
+        dropdownFocusIndex = -1;
+      }
+    }
+
+    // Filter students based on search query and exclude already enrolled
+    $: filteredStudents = allStudents.filter(student => {
+      // Exclude already enrolled students
+      const isEnrolled = enrolledStudents.some(e => e.student?.id === student.id);
+      if (isEnrolled) return false;
+
+      // Filter by search query
+      if (searchStudentQuery.trim()) {
+        const query = searchStudentQuery.toLowerCase();
+        const fullName = `${student.first_name || ''} ${student.last_name || ''}`.toLowerCase();
+        const email = (student.email || '').toLowerCase();
+        return fullName.includes(query) || email.includes(query);
+      }
+      return true;
+    });
+
     function handleClassTypeChange(e) {
       const classTypeId = e.target.value;
       if (!classTypeId) return;
@@ -241,6 +376,11 @@
       // Fetch enrolled students and prep items
       fetchEnrolledStudents();
       fetchPrepItems();
+    }
+
+    // Fetch all students when students tab is opened
+    $: if (activeTab === 'students' && panelData?.id) {
+      fetchAllStudents();
     }
   </script>
   
@@ -458,54 +598,139 @@
             </form>
           {:else if activeTab === 'students'}
             <!-- Students List -->
-            <div class="space-y-3">
-              <div class="mb-4">
-                <h3 class="text-sm font-semibold text-gray-700">Enrolled Students</h3>
-                <p class="text-xs text-gray-500">
-                  {enrolledStudents.length} / {panelData.capacity || 0} capacity
-                </p>
+            <div class="space-y-4">
+              <!-- Add Student Section -->
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Book Student</h3>
+
+                {#if loadingAllStudents}
+                  <div class="text-center py-4 text-gray-400 text-sm">
+                    Loading students...
+                  </div>
+                {:else}
+                  <div class="space-y-3">
+                    <!-- Search Input with Autocomplete -->
+                    <div class="relative">
+                      <input
+                        type="text"
+                        bind:value={searchStudentQuery}
+                        on:input={handleSearchInput}
+                        on:keydown={handleSearchKeydown}
+                        on:focus={() => {
+                          if (searchStudentQuery.length >= 3) showDropdown = true;
+                        }}
+                        placeholder="Type at least 3 characters to search students..."
+                        class="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+
+                      <!-- Autocomplete Dropdown -->
+                      {#if showDropdown && searchStudentQuery.length >= 3}
+                        <div class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          {#if filteredStudents.length === 0}
+                            <div class="px-3 py-2 text-sm text-gray-500">
+                              No students found
+                            </div>
+                          {:else}
+                            {#each filteredStudents.slice(0, 20) as student, index}
+                              <button
+                                type="button"
+                                on:click={() => selectStudentFromDropdown(student)}
+                                class="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 focus:bg-orange-50 transition-colors"
+                                class:bg-orange-50={index === dropdownFocusIndex}
+                              >
+                                <div class="font-medium text-gray-900">
+                                  {student.first_name || ''} {student.last_name || ''}
+                                </div>
+                                <div class="text-xs text-gray-500">{student.email}</div>
+                              </button>
+                            {/each}
+                            {#if filteredStudents.length > 20}
+                              <div class="px-3 py-2 text-xs text-gray-500 border-t">
+                                Showing 20 of {filteredStudents.length} results. Keep typing to narrow down.
+                              </div>
+                            {/if}
+                          {/if}
+                        </div>
+                      {/if}
+                    </div>
+
+                    <!-- Book Button -->
+                    <button
+                      on:click={bookStudent}
+                      disabled={!selectedStudent}
+                      class="w-full px-3 py-2 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {selectedStudent ? `Book ${selectedStudent.first_name || 'Student'}` : 'Select a student to book'}
+                    </button>
+                  </div>
+                {/if}
               </div>
 
-              {#if loadingStudents}
-                <div class="text-center py-8 text-gray-400 text-sm">
-                  Loading students...
+              <!-- Enrolled Students List -->
+              <div>
+                <div class="mb-3">
+                  <h3 class="text-sm font-semibold text-gray-700">Enrolled Students</h3>
+                  <p class="text-xs text-gray-500">
+                    {enrolledStudents.length} / {panelData.capacity || 0} capacity
+                  </p>
                 </div>
-              {:else if enrolledStudents.length === 0}
-                <div class="text-center py-8 text-gray-400 text-sm">
-                  No students enrolled yet
-                </div>
-              {:else}
-                {#each enrolledStudents as enrollment}
-                  <div class="flex items-center gap-3 p-3 border rounded hover:bg-gray-50">
-                    <!-- Avatar/Initial -->
-                    <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                      {enrollment.student?.first_name?.charAt(0) || '?'}
-                    </div>
 
-                    <!-- Info -->
-                    <div class="flex-1 min-w-0">
-                      <div class="text-sm font-medium text-gray-900">
-                        {enrollment.student?.first_name || 'Unknown'} {enrollment.student?.last_name || ''}
-                      </div>
-                      <div class="text-xs text-gray-500">{enrollment.student?.email || 'No email'}</div>
-                    </div>
-
-                    <!-- Attendance Status Dropdown -->
-                    <div class="flex-shrink-0">
-                      <select
-                        value={enrollment.attendance_status || ''}
-                        on:change={(e) => updateAttendanceStatus(enrollment.id, e.target.value || null)}
-                        class="px-2 py-1 text-xs border rounded focus:ring-2 focus:ring-orange-500 cursor-pointer"
-                      >
-                        <option value="">Not Set</option>
-                        <option value="attended">Attended</option>
-                        <option value="no-show">No Show</option>
-                        <option value="excused">Excused</option>
-                      </select>
-                    </div>
+                {#if loadingStudents}
+                  <div class="text-center py-8 text-gray-400 text-sm">
+                    Loading students...
                   </div>
-                {/each}
-              {/if}
+                {:else if enrolledStudents.length === 0}
+                  <div class="text-center py-8 text-gray-400 text-sm">
+                    No students enrolled yet
+                  </div>
+                {:else}
+                  <div class="space-y-2">
+                    {#each enrolledStudents as enrollment}
+                      <div class="flex items-center gap-3 p-3 border rounded hover:bg-gray-50">
+                        <!-- Avatar/Initial -->
+                        <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                          {enrollment.student?.first_name?.charAt(0) || '?'}
+                        </div>
+
+                        <!-- Info -->
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-gray-900">
+                            {enrollment.student?.first_name || 'Unknown'} {enrollment.student?.last_name || ''}
+                          </div>
+                          <div class="text-xs text-gray-500">{enrollment.student?.email || 'No email'}</div>
+                        </div>
+
+                        <!-- Attendance Status Dropdown -->
+                        <div class="flex-shrink-0">
+                          <select
+                            value={enrollment.attendance_status || ''}
+                            on:change={(e) => updateAttendanceStatus(enrollment.id, e.target.value || null)}
+                            class="px-2 py-1 text-xs border rounded focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                          >
+                            <option value="">Not Set</option>
+                            <option value="attended">Attended</option>
+                            <option value="no-show">No Show</option>
+                            <option value="excused">Excused</option>
+                          </select>
+                        </div>
+
+                        <!-- Cancel Button -->
+                        <div class="flex-shrink-0">
+                          <button
+                            on:click={() => cancelEnrollment(enrollment.id)}
+                            class="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                            title="Cancel enrollment"
+                          >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
             </div>
           {:else if activeTab === 'prep'}
             <!-- Prep Items Management -->
