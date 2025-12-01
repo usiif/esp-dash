@@ -79,6 +79,15 @@ export async function POST({ request, cookies }) {
       return json({ error: 'Failed to update class', details: error.message }, { status: 500 });
     }
 
+    // Sync with Google Calendar (fire and forget)
+    if (data?.id) {
+      supabase.functions.invoke('class-event-sync', {
+        body: { class_id: data.id, action: 'sync' }
+      }).catch(err => {
+        console.error('Failed to sync class update with Google Calendar:', err);
+      });
+    }
+
     // Get enrollment count for this class
     const { data: enrollmentData } = await supabase
       .from('enrollments')

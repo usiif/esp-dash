@@ -77,6 +77,15 @@ export async function POST({ request, cookies }) {
       return json({ error: 'Failed to create class', details: error.message }, { status: 500 });
     }
 
+    // Sync with Google Calendar (fire and forget)
+    if (data?.id) {
+      supabase.functions.invoke('class-event-sync', {
+        body: { class_id: data.id, action: 'sync' }
+      }).catch(err => {
+        console.error('Failed to sync class with Google Calendar:', err);
+      });
+    }
+
     // Transform the response to match the frontend format
     const startIso = data.starts_at ? new Date(data.starts_at).toISOString() : null;
     const endIso = data.starts_at 

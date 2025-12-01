@@ -23,7 +23,17 @@ export async function POST({ request, cookies }) {
       return json({ error: 'Class ID is required' }, { status: 400 });
     }
 
-    // Delete the class from Supabase
+    // Delete from Google Calendar BEFORE deleting from database
+    // This way the edge function can still access class data
+    try {
+      await supabase.functions.invoke('class-event-sync', {
+        body: { class_id: id, action: 'delete' }
+      });
+    } catch (err) {
+      console.error('Failed to delete class from Google Calendar:', err);
+    }
+
+    // Now delete the class from Supabase
     const { error } = await supabase
       .from('classes')
       .delete()

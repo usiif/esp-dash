@@ -130,6 +130,15 @@ export async function POST({ params, request }) {
       console.log('✅ Admin enrolled student:', { student_id, classId, enrollmentId: enrollment.id });
     }
 
+    // Sync enrollment with Google Calendar (fire and forget)
+    if (classId) {
+      supabase.functions.invoke('class-event-sync', {
+        body: { class_id: classId, action: 'sync' }
+      }).catch(err => {
+        console.error('Failed to sync enrollment with Google Calendar:', err);
+      });
+    }
+
     // Send confirmation email (don't await - fire and forget)
     if (studentData?.email) {
       const tz = studentData.tz || 'UTC';

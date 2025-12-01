@@ -46,35 +46,6 @@ function generateGoogleCalendarLink(data) {
 }
 
 /**
- * Generate iCal/Outlook calendar file content
- */
-function generateICalContent(data) {
-	const startDate = new Date(data.startsAt);
-	const endDate = new Date(startDate.getTime() + data.durationMinutes * 60000);
-
-	const formatDate = (date) => {
-		return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-	};
-
-	const now = formatDate(new Date());
-
-	return `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Expat Spanish Lessons//Class Booking//EN
-BEGIN:VEVENT
-UID:class-${data.classId || 'booking'}-${now}@expatspanishlessons.com
-DTSTAMP:${now}
-DTSTART:${formatDate(startDate)}
-DTEND:${formatDate(endDate)}
-SUMMARY:${data.className}
-DESCRIPTION:Topic: ${data.topic || 'Spanish Class'}\\nTeacher: ${data.teacherName}\\n\\nJoin via Zoom: ${data.zoomLink}\\n\\nView your dashboard: https://my.expatspanishlessons.com/dashboard
-LOCATION:Zoom (Online)
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR`;
-}
-
-/**
  * Class booking confirmation email template
  * @param {object} data - Email data
  * @param {string} data.studentName - Student's first name
@@ -103,8 +74,7 @@ export function classBookingTemplate(data) {
 
 	const formattedDate = formatDate(startsAt, timezone);
 	const googleCalLink = generateGoogleCalendarLink(data);
-	const iCalContent = generateICalContent(data);
-	const iCalDataUri = `data:text/calendar;charset=utf-8,${encodeURIComponent(iCalContent)}`;
+	const iCalLink = `https://my.expatspanishlessons.com/api/calendar/ics/${classId}`;
 
 	const subject = `✅ Class Confirmed: ${className}`;
 
@@ -124,7 +94,7 @@ Join via Zoom: ${zoomLink}
 
 Add to your calendar:
 - Google Calendar: ${googleCalLink}
-- Outlook/iCal: Download from your dashboard
+- iCal/Outlook: ${iCalLink}
 
 Need help getting started? Watch this quick tutorial:
 https://www.loom.com/share/abc123tutorial
@@ -172,7 +142,7 @@ The Expat Spanish Team
 					<p style="margin: 0; font-size: 14px; line-height: 20px;">
 						${link(googleCalLink, '+ Google Calendar')}
 						<span style="color: #6b7280; margin: 0 8px;">•</span>
-						<a href="${iCalDataUri}" download="class-booking.ics" style="color: #2563eb; text-decoration: none; font-size: 14px;">+ Outlook/iCal</a>
+						${link(iCalLink, '+ iCal/Outlook')}
 					</p>
 				</td>
 			</tr>

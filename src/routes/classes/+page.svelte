@@ -312,6 +312,32 @@
     return `${startMonth} - ${endMonth}`;
   }
 
+  // Generate Google Calendar link for a class
+  function generateGoogleCalendarLink(classItem) {
+    const startDate = new Date(classItem.start);
+    const endDate = new Date(startDate.getTime() + classItem.duration_minutes * 60000);
+
+    const formatDate = (date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: classItem.title || 'Spanish Class',
+      dates: `${formatDate(startDate)}/${formatDate(endDate)}`,
+      details: `Topic: ${classItem.topic || 'Spanish Class'}\nTeacher: ${classItem.teacher}\n\nJoin via Zoom: ${classItem.zoom_link}\n\nView your dashboard: https://my.expatspanishlessons.com/dashboard`,
+      location: 'Zoom (Online)',
+      trp: 'false'
+    });
+
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }
+
+  // Generate iCal download link
+  function generateICalLink(classItem) {
+    return `https://my.expatspanishlessons.com/api/calendar/ics/${classItem.id}`;
+  }
+
   // Common timezones list
   const commonTimezones = [
     { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
@@ -789,25 +815,54 @@
             {@const isCancelling = cancellingEnrollmentId === enrollment?.enrollment_id}
 
             <!-- Enrolled: Show Join and Cancel -->
-            <div class="flex gap-2">
-              {#if selectedClass.zoom_link}
-                <a
-                  href={selectedClass.zoom_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex-1 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-blue-600 text-center transition-colors"
-                >
-                  Join Class
-                </a>
-              {/if}
+            <div class="space-y-3">
+              <div class="flex gap-2">
+                {#if selectedClass.zoom_link}
+                  <a
+                    href={selectedClass.zoom_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex-1 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-blue-600 text-center transition-colors"
+                  >
+                    Join Class
+                  </a>
+                {/if}
 
-              <button
-                on:click={() => cancelEnrollment(enrollment.enrollment_id, selectedClass.id)}
-                disabled={isCancelling}
-                class="px-4 py-2 text-gray-600 text-sm rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"
-              >
-                {isCancelling ? 'Cancelling...' : 'Cancel My Class'}
-              </button>
+                <button
+                  on:click={() => cancelEnrollment(enrollment.enrollment_id, selectedClass.id)}
+                  disabled={isCancelling}
+                  class="px-4 py-2 text-gray-600 text-sm rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                >
+                  {isCancelling ? 'Cancelling...' : 'Cancel My Class'}
+                </button>
+              </div>
+
+              <!-- Calendar Export Buttons -->
+              <div class="pt-2 border-t border-gray-200">
+                <p class="text-xs text-gray-600 mb-2">Add to your calendar:</p>
+                <div class="flex gap-2">
+                  <a
+                    href={generateGoogleCalendarLink(selectedClass)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex-1 px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors inline-flex items-center justify-center gap-2"
+                  >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Google
+                  </a>
+                  <a
+                    href={generateICalLink(selectedClass)}
+                    class="flex-1 px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors inline-flex items-center justify-center gap-2"
+                  >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    iCal
+                  </a>
+                </div>
+              </div>
             </div>
           {:else}
             {@const isEnrolling = enrollingClassId === selectedClass.id}

@@ -64,6 +64,15 @@ export async function POST({ request, cookies }) {
 
     console.log('✅ Enrollment cancelled:', { studentId, enrollment_id });
 
+    // Sync cancellation with Google Calendar (fire and forget)
+    if (enrollment?.classes?.id) {
+      supabase.functions.invoke('class-event-sync', {
+        body: { class_id: enrollment.classes.id, action: 'sync' }
+      }).catch(err => {
+        console.error('Failed to sync cancellation with Google Calendar:', err);
+      });
+    }
+
     // Send cancellation email (fire and forget)
     if (studentData?.email && enrollment.classes) {
       const tz = session.tz || 'UTC';

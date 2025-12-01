@@ -111,6 +111,15 @@ export async function POST({ request, cookies }) {
       console.log('✅ Student enrolled:', { studentId, class_id, enrollmentId: enrollment.id });
     }
 
+    // Sync enrollment with Google Calendar (fire and forget)
+    if (class_id) {
+      supabase.functions.invoke('class-event-sync', {
+        body: { class_id, action: 'sync' }
+      }).catch(err => {
+        console.error('Failed to sync enrollment with Google Calendar:', err);
+      });
+    }
+
     // Send confirmation email (don't await - fire and forget)
     if (studentData?.email) {
       const tz = session.tz || 'UTC';

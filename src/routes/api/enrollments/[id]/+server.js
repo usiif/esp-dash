@@ -48,7 +48,14 @@ export async function DELETE({ params }) {
       return json({ error: 'Failed to cancel enrollment' }, { status: 500 });
     }
 
-    console.log('✅ Admin cancelled enrollment:', { enrollmentId, student_id: enrollment.student_id, class_id: enrollment.class_id });
+    // Sync cancellation with Google Calendar (fire and forget)
+    if (enrollment?.class_id) {
+      supabase.functions.invoke('class-event-sync', {
+        body: { class_id: enrollment.class_id, action: 'sync' }
+      }).catch(err => {
+        console.error('Failed to sync cancellation with Google Calendar:', err);
+      });
+    }
 
     // Send cancellation email (fire and forget)
     if (enrollment.students?.email && enrollment.classes) {
@@ -65,10 +72,7 @@ export async function DELETE({ params }) {
         timezone: tz
       }).catch(err => {
         console.error('Failed to send cancellation email:', err);
-        // Don't fail the cancellation if email fails
       });
-    } else {
-      console.warn('⚠️ Could not send cancellation email: missing student or class data');
     }
 
     return json({ success: true, message: 'Enrollment canceled successfully' });
