@@ -1,52 +1,68 @@
 // src/routes/recordings/+page.server.js
-import { redirect } from '@sveltejs/kit';
-import { getSessionById, getEnrollmentsByStudent } from '$lib/supabase.js';
+import { supabase } from '$lib/supabase.js';
 
-export async function load({ cookies }) {
-  const sessionId = cookies.get('session_id');
-  if (!sessionId) throw redirect(302, '/');
+export async function load() {
+  try {
+    // Fetch all recordings with associated class details
+    const { data: recordings, error } = await supabase
+      .from('class_recordings')
+      .select(`
+        id,
+        class_id,
+        zoom_start_time,
+        zoom_duration_minutes,
+        video_storage_path,
+        transcript_text,
+        notes_json,
+        created_at,
+        classes (
+          id,
+          title,
+          topic,
+          teacher:team(full_name)
+        )
+      `)
+      .order('zoom_start_time', { ascending: false });
 
-  const session = await getSessionById(sessionId);
-  if (!session) {
-    cookies.delete('session_id', { path: '/' });
-    throw redirect(302, '/');
-  }
+    if (error) {
+      console.error('Error fetching recordings:', error);
+      return { recordings: [] };
+    }
 
-  const user = {
-    name: session.first_name,
-    level: session.level_key,
-    id: session.student_id
-  };
-
-  // Fetch ALL enrollments
-  const allEnrollments = await getEnrollmentsByStudent(session.student_id);
-
-  const now = new Date();
-
-  // Get only past classes
-  const pastClasses = allEnrollments
-    .filter(e => e.classes && new Date(e.classes.starts_at) < now)
-    .map(e => ({
-      enrollment_id: e.id,
-      class_id: e.class_id,
-      status: e.status,
-      attendance_status: e.attendance_status,
-      enrolled_at: e.enrolled_at,
-      class: {
-        id: e.classes.id,
-        title: e.classes.title || 'Class',
-        description: e.classes.description,
-        notes: e.classes.notes,
-        start: e.classes.starts_at,
-        duration_minutes: e.classes.duration_minutes || 60,
-        capacity: e.classes.capacity || 0,
-        levels: Array.isArray(e.classes.levels) ? e.classes.levels : [],
-        zoom_link: e.classes.zoom_link,
-        recording_link: e.classes.recording_link,
-        teacher: e.classes.teacher ? e.classes.teacher.full_name || e.classes.teacher.email : null
+    // Parse notes_json and get video URLs for each recording
+    const processedRecordings = (recordings || []).map(rec => {
+      let notes = null;
+      if (rec.notes_json) {
+        try {
+          notes = typeof rec.notes_json === 'string'
+            ? JSON.parse(rec.notes_json)
+            : rec.notes_json;
+        } catch (err) {
+          console.error('Error parsing notes_json:', err);
+        }
       }
-    }))
-    .sort((a, b) => new Date(b.class.start) - new Date(a.class.start)); // Most recent first
 
-  return { user, pastClasses };
+      // Get video URL from storage - create signed URL with 1 hour expiry
+      let videoUrl = null;
+      if (rec.video_storage_path) {
+        const { data: urlData } = supabase.storage
+          .from('class-recordings')
+          .createSignedUrl(rec.video_storage_path, 3600);
+        videoUrl = urlData?.signedUrl;
+      }
+
+      return {
+        ...rec,
+        notes,
+        videoUrl
+      };
+    });
+
+    return {
+      recordings: processedRecordings
+    };
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    return { recordings: [] };
+  }
 }

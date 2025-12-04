@@ -5,7 +5,7 @@ import { getFlashcardLinks } from '$lib/flashcards.js';
 
 export const supabase = createClient(
   env.SUPABASE_URL,
-  env.SUPABASE_ANON_KEY
+  env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export async function storeCode(email, code) {

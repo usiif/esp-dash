@@ -6,7 +6,7 @@ export async function load({ cookies, url }) {
 
   // Public pages that don't need user data
   const publicPages = ['/', '/verify'];
-  const isPublicPage = publicPages.includes(url.pathname);
+  const isPublicPage = publicPages.includes(url.pathname) || url.pathname.startsWith('/recordings');
 
   if (!sessionId || isPublicPage) {
     return {
