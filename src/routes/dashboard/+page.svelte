@@ -305,22 +305,30 @@
 
                   <!-- Actions -->
                   <div class="flex items-center gap-2 pt-2 border-t border-gray-100">
-                    {#if enrollment.class.zoom_link}
-                      <a
-                        href={enrollment.class.zoom_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="flex-1 px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 text-center whitespace-nowrap"
+                    {#if enrollment.class.hasEnded}
+                      <!-- Show "Ended" indicator for past classes -->
+                      <div class="flex-1 px-3 py-1.5 bg-gray-200 text-gray-600 text-xs font-medium rounded text-center whitespace-nowrap">
+                        Ended
+                      </div>
+                    {:else}
+                      <!-- Show Join and Cancel buttons for active/upcoming classes -->
+                      {#if enrollment.class.zoom_link}
+                        <a
+                          href={enrollment.class.zoom_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="flex-1 px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 text-center whitespace-nowrap"
+                        >
+                          Join
+                        </a>
+                      {/if}
+                      <button
+                        on:click={() => cancelBooking(enrollment.enrollment_id)}
+                        class="text-xs text-gray-500 hover:text-red-600 underline"
                       >
-                        Join
-                      </a>
+                        Cancel
+                      </button>
                     {/if}
-                    <button
-                      on:click={() => cancelBooking(enrollment.enrollment_id)}
-                      class="text-xs text-gray-500 hover:text-red-600 underline"
-                    >
-                      Cancel
-                    </button>
                   </div>
                 </div>
               </div>

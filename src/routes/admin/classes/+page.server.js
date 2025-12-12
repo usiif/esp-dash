@@ -20,10 +20,14 @@ export async function load({ cookies }) {
     throw redirect(302, '/');
   }
 
-  // fetch classes starting today through +90 days
-  const startIso = new Date().toISOString();
+  // fetch classes from 2 weeks in the past through +90 days in the future
+  const now = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 14); // 2 weeks ago
+  const startIso = start.toISOString();
+
   const end = new Date();
-  end.setDate(end.getDate() + 90);
+  end.setDate(end.getDate() + 90); // 90 days ahead
   const endIso = end.toISOString();
 
   // select teacher via foreign table (team) and class_type
@@ -77,6 +81,11 @@ export async function load({ cookies }) {
     const capacity = r.capacity || 0;
     const startIso = r.starts_at ? new Date(r.starts_at).toISOString() : null;
     const endIso = r.starts_at ? addMinutesToIso(r.starts_at, r.duration_minutes || 60) : null;
+
+    // Determine if the class has already ended
+    const classEndTime = endIso ? new Date(endIso) : null;
+    const isPast = classEndTime ? classEndTime < now : false;
+
     return {
       id: r.id,
       title: r.title || 'Class',
@@ -96,7 +105,8 @@ export async function load({ cookies }) {
       zoom_link: r.zoom_link || null,
       recording_link: r.recording_link || null,
       notes: r.notes || null,
-      color: '#ea580c' // placeholder; you can derive/store colors if you want
+      isPast, // Add the isPast flag
+      color: isPast ? '#9ca3af' : '#ea580c' // Gray for past classes, orange for future
     };
   });
 

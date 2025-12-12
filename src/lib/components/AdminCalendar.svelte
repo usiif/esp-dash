@@ -224,23 +224,30 @@
             {#each dayEvents as ev}
               <button
                 on:click={() => openEvent(ev)}
-                class="w-full text-left p-2 rounded border hover:shadow-md transition-shadow bg-white group"
+                class="w-full text-left p-2 rounded border hover:shadow-md transition-shadow group"
+                class:bg-white={!ev.isPast}
+                class:bg-gray-50={ev.isPast}
+                class:opacity-75={ev.isPast}
                 title={ev.title}
               >
                 <!-- Time and title -->
                 <div class="flex items-start justify-between gap-1 mb-1.5">
-                  <div class="text-xs font-semibold text-gray-900 truncate flex-1">
+                  <div class="text-xs font-semibold truncate flex-1"
+                    class:text-gray-900={!ev.isPast}
+                    class:text-gray-600={ev.isPast}>
                     {formatTime(ev.start)}
                   </div>
                   <div
                     class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-                    style="background: #ea580c;"
+                    style="background: {ev.isPast ? '#9ca3af' : '#ea580c'};"
                   >
                     {getTeacherInitials(ev.teacher)}
                   </div>
                 </div>
 
-                <div class="text-xs font-medium text-gray-700 truncate mb-2">
+                <div class="text-xs font-medium truncate mb-2"
+                  class:text-gray-700={!ev.isPast}
+                  class:text-gray-500={ev.isPast}>
                   {ev.title}
                 </div>
 
@@ -296,6 +303,10 @@
             <div class="w-3 h-3 rounded bg-red-100 border border-red-300"></div>
             <span>Full</span>
           </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-3 h-3 rounded bg-gray-100 border border-gray-300"></div>
+            <span>Past</span>
+          </div>
         </div>
 
         <!-- Month grid (4 weeks) -->
@@ -332,19 +343,25 @@
                   <button
                     on:click={() => openEvent(ev)}
                     class="w-full text-left px-2 py-1.5 rounded text-[10px] border transition-all hover:shadow-sm cursor-pointer"
-                    class:bg-red-50={isFull}
-                    class:border-red-300={isFull}
-                    class:text-red-900={isFull}
-                    class:bg-yellow-50={!isFull && isFillingUp}
-                    class:border-yellow-300={!isFull && isFillingUp}
-                    class:text-yellow-900={!isFull && isFillingUp}
-                    class:bg-green-50={!isFull && !isFillingUp}
-                    class:border-green-300={!isFull && !isFillingUp}
-                    class:text-green-900={!isFull && !isFillingUp}
-                    title="{formatTime(ev.start)} - {ev.title}\n{ev.enrolled}/{ev.capacity} enrolled\nLevels: {ev.levels.join(', ')}"
+                    class:opacity-60={ev.isPast}
+                    class:bg-gray-100={ev.isPast}
+                    class:border-gray-300={ev.isPast}
+                    class:text-gray-700={ev.isPast}
+                    class:bg-red-50={!ev.isPast && isFull}
+                    class:border-red-300={!ev.isPast && isFull}
+                    class:text-red-900={!ev.isPast && isFull}
+                    class:bg-yellow-50={!ev.isPast && !isFull && isFillingUp}
+                    class:border-yellow-300={!ev.isPast && !isFull && isFillingUp}
+                    class:text-yellow-900={!ev.isPast && !isFull && isFillingUp}
+                    class:bg-green-50={!ev.isPast && !isFull && !isFillingUp}
+                    class:border-green-300={!ev.isPast && !isFull && !isFillingUp}
+                    class:text-green-900={!ev.isPast && !isFull && !isFillingUp}
+                    title="{formatTime(ev.start)} - {ev.title}\n{ev.enrolled}/{ev.capacity} enrolled\nLevels: {ev.levels.join(', ')}{ev.isPast ? '\n[PAST CLASS]' : ''}"
                   >
                     <div class="flex items-center justify-between gap-1 mb-0.5">
-                      <span class="font-semibold">{formatTime(ev.start).replace(':00', '').replace(' ', '')}</span>
+                      <span class="font-semibold">
+                        {formatTime(ev.start).replace(':00', '').replace(' ', '')}
+                      </span>
                       <span class="text-[9px] font-medium px-1 py-0.5 bg-white rounded">
                         {ev.enrolled}/{ev.capacity}
                       </span>

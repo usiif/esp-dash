@@ -43,14 +43,16 @@ export async function load({ cookies, url }) {
     tz: profileTz
   };
 
-  // Fetch available classes (upcoming classes that match student's level)
-  // Get classes from now onwards for the next 4 weeks (28 days)
+  // Fetch available classes (2 weeks past through 4 weeks future)
   const now = new Date();
+
+  const start = new Date(now);
+  start.setDate(now.getDate() - 14); // 2 weeks ago
 
   const end = new Date(now);
   end.setDate(now.getDate() + 28); // 4 weeks from now
 
-  const nowIso = now.toISOString();
+  const startIso = start.toISOString();
   const endIso = end.toISOString();
 
   const { data: classesData, error: classesError } = await supabase
@@ -77,7 +79,7 @@ export async function load({ cookies, url }) {
         is_required
       )
     `)
-    .gte('starts_at', nowIso)
+    .gte('starts_at', startIso)
     .lte('starts_at', endIso)
     .order('starts_at', { ascending: true });
 
@@ -119,6 +121,12 @@ export async function load({ cookies, url }) {
       const capacity = c.capacity || 0;
       const available_spaces = Math.max(0, capacity - enrolled);
 
+      // Calculate end time and check if class has ended
+      const classStart = c.starts_at ? new Date(c.starts_at) : null;
+      const duration = c.duration_minutes || 60;
+      const classEnd = classStart ? new Date(classStart.getTime() + duration * 60000) : null;
+      const isPast = classEnd ? classEnd < now : false;
+
       return {
         id: c.id,
         title: c.title || 'Class',
@@ -126,13 +134,14 @@ export async function load({ cookies, url }) {
         description: c.description,
         notes: c.notes,
         start: c.starts_at,
-        duration_minutes: c.duration_minutes || 60,
+        duration_minutes: duration,
         capacity,
         available_spaces,
         levels: Array.isArray(c.levels) ? c.levels : [],
         zoom_link: c.zoom_link,
         teacher: c.teacher ? c.teacher.full_name || c.teacher.email : null,
         teacher_id: c.teacher ? c.teacher.id : null,
+        isPast, // Flag indicating if class has ended
         prep_items: (c.class_prep_items || [])
           .map(p => ({
             id: p.id,

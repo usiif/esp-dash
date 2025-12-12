@@ -604,18 +604,30 @@
                 {#each dayClasses.slice(0, 4) as classItem}
                   {@const isEnrolled = enrolledClassIds.has(classItem.id)}
                   {@const isFull = classItem.available_spaces === 0}
+                  {@const isPast = classItem.isPast}
                   <button
                     on:click={() => openClassDetails(classItem)}
-                    class="w-full text-left px-1.5 py-1 rounded transition-colors"
-                    class:bg-green-100={isEnrolled}
-                    class:text-green-700={isEnrolled}
-                    class:hover:bg-green-200={isEnrolled}
-                    class:bg-gray-100={!isEnrolled && isFull}
-                    class:text-gray-500={!isEnrolled && isFull}
-                    class:hover:bg-gray-200={!isEnrolled && isFull}
-                    class:bg-orange-100={!isEnrolled && !isFull}
-                    class:text-orange-700={!isEnrolled && !isFull}
-                    class:hover:bg-orange-200={!isEnrolled && !isFull}
+                    class="w-full text-left px-1.5 py-1 rounded transition-colors border-2"
+                    class:opacity-75={isPast}
+                    class:border-gray-400={isPast}
+                    class:border-dashed={isPast}
+                    class:border-transparent={!isPast}
+                    class:bg-green-100={isEnrolled && !isPast}
+                    class:text-green-700={isEnrolled && !isPast}
+                    class:hover:bg-green-200={isEnrolled && !isPast}
+                    class:bg-green-50={isEnrolled && isPast}
+                    class:text-green-600={isEnrolled && isPast}
+                    class:hover:bg-green-100={isEnrolled && isPast}
+                    class:bg-gray-100={!isEnrolled && isFull && !isPast}
+                    class:text-gray-500={!isEnrolled && isFull && !isPast}
+                    class:hover:bg-gray-200={!isEnrolled && isFull && !isPast}
+                    class:bg-gray-50={!isEnrolled && isFull && isPast}
+                    class:text-gray-400={!isEnrolled && isFull && isPast}
+                    class:bg-orange-100={!isEnrolled && !isFull && !isPast}
+                    class:text-orange-700={!isEnrolled && !isFull && !isPast}
+                    class:hover:bg-orange-200={!isEnrolled && !isFull && !isPast}
+                    class:bg-orange-50={!isEnrolled && !isFull && isPast}
+                    class:text-orange-600={!isEnrolled && !isFull && isPast}
                   >
                     <div class="flex items-center justify-between gap-1">
                       <span class="text-[11px] font-medium truncate">{formatTime(classItem.start)}</span>
@@ -651,6 +663,10 @@
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-gray-100 rounded border border-gray-300"></div>
         <span class="text-gray-600">Full</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-white rounded border-2 border-dashed border-gray-400"></div>
+        <span class="text-gray-600">Past classes</span>
       </div>
     </div>
   </main>
@@ -813,82 +829,100 @@
           {#if enrolledClassIds.has(selectedClass.id)}
             {@const enrollment = enrollmentMap.get(selectedClass.id)}
             {@const isCancelling = cancellingEnrollmentId === enrollment?.enrollment_id}
+            {@const isPast = selectedClass.isPast}
 
-            <!-- Enrolled: Show Join and Cancel -->
+            <!-- Enrolled: Show Join and Cancel or Past Indicator -->
             <div class="space-y-3">
-              <div class="flex gap-2">
-                {#if selectedClass.zoom_link}
-                  <a
-                    href={selectedClass.zoom_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="flex-1 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-blue-600 text-center transition-colors"
-                  >
-                    Join Class
-                  </a>
-                {/if}
-
-                <button
-                  on:click={() => cancelEnrollment(enrollment.enrollment_id, selectedClass.id)}
-                  disabled={isCancelling}
-                  class="px-4 py-2 text-gray-600 text-sm rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                >
-                  {isCancelling ? 'Cancelling...' : 'Cancel My Class'}
-                </button>
-              </div>
-
-              <!-- Calendar Export Buttons -->
-              <div class="pt-2 border-t border-gray-200">
-                <p class="text-xs text-gray-600 mb-2">Add to your calendar:</p>
-                <div class="flex gap-2">
-                  <a
-                    href={generateGoogleCalendarLink(selectedClass)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="flex-1 px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors inline-flex items-center justify-center gap-2"
-                  >
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Google
-                  </a>
-                  <a
-                    href={generateICalLink(selectedClass)}
-                    class="flex-1 px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors inline-flex items-center justify-center gap-2"
-                  >
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    iCal
-                  </a>
+              {#if isPast}
+                <!-- Past class - show disabled state -->
+                <div class="w-full px-4 py-2.5 text-sm font-medium rounded bg-gray-200 text-gray-600 text-center">
+                  Class Ended
                 </div>
-              </div>
+              {:else}
+                <!-- Active class - show Join and Cancel -->
+                <div class="flex gap-2">
+                  {#if selectedClass.zoom_link}
+                    <a
+                      href={selectedClass.zoom_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="flex-1 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-blue-600 text-center transition-colors"
+                    >
+                      Join Class
+                    </a>
+                  {/if}
+
+                  <button
+                    on:click={() => cancelEnrollment(enrollment.enrollment_id, selectedClass.id)}
+                    disabled={isCancelling}
+                    class="px-4 py-2 text-gray-600 text-sm rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                  >
+                    {isCancelling ? 'Cancelling...' : 'Cancel My Class'}
+                  </button>
+                </div>
+              {/if}
+
+              <!-- Calendar Export Buttons - only if not past -->
+              {#if !selectedClass.isPast}
+                <div class="pt-2 border-t border-gray-200">
+                  <p class="text-xs text-gray-600 mb-2">Add to your calendar:</p>
+                  <div class="flex gap-2">
+                    <a
+                      href={generateGoogleCalendarLink(selectedClass)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="flex-1 px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Google
+                    </a>
+                    <a
+                      href={generateICalLink(selectedClass)}
+                      class="flex-1 px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      iCal
+                    </a>
+                  </div>
+                </div>
+              {/if}
             </div>
           {:else}
             {@const isEnrolling = enrollingClassId === selectedClass.id}
             {@const isFull = selectedClass.available_spaces === 0}
+            {@const isPast = selectedClass.isPast}
 
-            <!-- Not enrolled: Show Reserve button -->
-            <button
-              on:click={() => reserveSpot(selectedClass)}
-              disabled={isEnrolling || isFull}
-              class="w-full px-4 py-2.5 text-sm font-medium rounded transition-colors"
-              class:bg-orange-500={!isFull}
-              class:hover:bg-orange-600={!isFull}
-              class:text-white={!isFull}
-              class:bg-gray-300={isFull}
-              class:text-gray-600={isFull}
-              class:cursor-not-allowed={isFull}
-              class:disabled:opacity-50={!isFull}
-            >
-              {#if isFull}
-                Class Full
-              {:else if isEnrolling}
-                Reserving...
-              {:else}
-                Reserve Spot
-              {/if}
-            </button>
+            <!-- Not enrolled: Show Reserve button or Past indicator -->
+            {#if isPast}
+              <div class="w-full px-4 py-2.5 text-sm font-medium rounded bg-gray-200 text-gray-600 text-center">
+                Class Ended
+              </div>
+            {:else}
+              <button
+                on:click={() => reserveSpot(selectedClass)}
+                disabled={isEnrolling || isFull}
+                class="w-full px-4 py-2.5 text-sm font-medium rounded transition-colors"
+                class:bg-orange-500={!isFull}
+                class:hover:bg-orange-600={!isFull}
+                class:text-white={!isFull}
+                class:bg-gray-300={isFull}
+                class:text-gray-600={isFull}
+                class:cursor-not-allowed={isFull}
+                class:disabled:opacity-50={!isFull}
+              >
+                {#if isFull}
+                  Class Full
+                {:else if isEnrolling}
+                  Reserving...
+                {:else}
+                  Reserve Spot
+                {/if}
+              </button>
+            {/if}
           {/if}
         </div>
       </div>

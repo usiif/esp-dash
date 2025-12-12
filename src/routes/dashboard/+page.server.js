@@ -59,8 +59,11 @@ export async function load({ cookies }) {
     needs_timezone: !session.tz // Flag if timezone is missing
   };
 
-  // Fetch available classes (upcoming classes that match student's level)
-  const now = new Date().toISOString();
+  // Fetch available classes (upcoming classes + recent past classes within 5 hours)
+  const now = new Date();
+  const fiveHoursAgo = new Date(now.getTime() - 5 * 60 * 60 * 1000); // 5 hours ago
+  const startIso = fiveHoursAgo.toISOString();
+
   const end = new Date();
   end.setDate(end.getDate() + 14); // Next 2 weeks
   const endIso = end.toISOString();
@@ -88,7 +91,7 @@ export async function load({ cookies }) {
         is_required
       )
     `)
-    .gte('starts_at', now)
+    .gte('starts_at', startIso)
     .lte('starts_at', endIso)
     .order('starts_at', { ascending: true });
 
@@ -121,26 +124,37 @@ export async function load({ cookies }) {
   // Fetch student's enrollments
   const enrollments = await getEnrollmentsByStudent(session.student_id);
 
-  // Map enrollments to simpler format with enrollment_id and prep_items included
-  const myClasses = enrollments.map(e => ({
-    enrollment_id: e.id,
-    class_id: e.class_id,
-    status: e.status,
-    enrolled_at: e.enrolled_at,
-    class: e.classes ? {
-      id: e.classes.id,
-      title: e.classes.title || 'Class',
-      description: e.classes.description,
-      notes: e.classes.notes,
-      start: e.classes.starts_at,
-      duration_minutes: e.classes.duration_minutes || 60,
-      capacity: e.classes.capacity || 0,
-      levels: Array.isArray(e.classes.levels) ? e.classes.levels : [],
-      zoom_link: e.classes.zoom_link,
-      teacher: e.classes.teacher ? e.classes.teacher.full_name || e.classes.teacher.email : null,
-      prep_items: []  // Will be populated from classes data if available
-    } : null
-  })).filter(e => e.class !== null);
+  // Map enrollments to simpler format with enrollment_id, prep_items, and hasEnded flag
+  const myClasses = enrollments.map(e => {
+    if (!e.classes) return null;
+
+    // Calculate if class has ended
+    const classStart = e.classes.starts_at ? new Date(e.classes.starts_at) : null;
+    const duration = e.classes.duration_minutes || 60;
+    const classEnd = classStart ? new Date(classStart.getTime() + duration * 60000) : null;
+    const hasEnded = classEnd ? classEnd < now : false;
+
+    return {
+      enrollment_id: e.id,
+      class_id: e.class_id,
+      status: e.status,
+      enrolled_at: e.enrolled_at,
+      class: {
+        id: e.classes.id,
+        title: e.classes.title || 'Class',
+        description: e.classes.description,
+        notes: e.classes.notes,
+        start: e.classes.starts_at,
+        duration_minutes: duration,
+        capacity: e.classes.capacity || 0,
+        levels: Array.isArray(e.classes.levels) ? e.classes.levels : [],
+        zoom_link: e.classes.zoom_link,
+        teacher: e.classes.teacher ? e.classes.teacher.full_name || e.classes.teacher.email : null,
+        hasEnded, // Flag indicating if class has ended
+        prep_items: []  // Will be populated from classes data if available
+      }
+    };
+  }).filter(e => e !== null);
 
   // Get set of enrolled class IDs
   const enrolledClassIds = new Set(myClasses.map(e => e.class_id));
