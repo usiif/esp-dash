@@ -23,6 +23,7 @@
 
   let showToast = false;
   let toastMessage = '';
+  let showFlashcardsModal = false;
 
   // Prep status: enrollment_id -> Set of completed prep_item_ids
   $: prepStatus = Object.entries(data.prepStatus || {}).reduce((acc, [enrollmentId, itemIds]) => {
@@ -146,7 +147,7 @@
 </script>
 
 <svelte:head>
-  <title>Dashboard - ESPL</title>
+  <title>Dashboard - Expat Spanish Lessons</title>
 </svelte:head>
 
 <div class="min-h-screen bg-gray-50">
@@ -187,11 +188,9 @@
           </a>
 
           <!-- Flashcards -->
-          {#if data.user.flashcardsShare}
-            <a
-              href={data.user.flashcardsShare}
-              target="_blank"
-              rel="noopener noreferrer"
+          {#if data.user.flashcardsActivate || data.user.flashcardsDeck}
+            <button
+              on:click={() => showFlashcardsModal = true}
               class="flex flex-col items-center justify-center bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
             >
               <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
@@ -200,7 +199,7 @@
                 </svg>
               </div>
               <p class="font-semibold text-gray-900 text-sm text-center">Review Flashcards</p>
-            </a>
+            </button>
           {/if}
 
           <!-- Online Courses -->
@@ -353,6 +352,84 @@
       </div>
     </div>
   </main>
+
+  <!-- Flashcards Modal -->
+  {#if showFlashcardsModal}
+    <div class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4" on:click={() => showFlashcardsModal = false} transition:fade>
+      <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full border-2 border-gray-200" on:click|stopPropagation transition:fade>
+        <!-- Header -->
+        <div class="flex items-start justify-between p-6 pb-4 border-b border-gray-100">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-gray-900 mb-0.5">Your Flashcards</h3>
+              <p class="text-sm text-gray-600">Practice vocabulary with Brainscape</p>
+            </div>
+          </div>
+          <button
+            on:click={() => showFlashcardsModal = false}
+            class="text-gray-400 hover:text-gray-700 transition-colors p-1 -mt-1"
+            aria-label="Close"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 space-y-5">
+          {#if data.user.flashcardsActivate}
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-lg p-5 border border-blue-200">
+              <div class="mb-4">
+                <h4 class="text-base font-bold text-blue-900 mb-2">Step 1: Activate Your Deck</h4>
+                <p class="text-sm text-gray-700 leading-relaxed">
+                  First time using flashcards? Click below to add them to your Brainscape account.
+                </p>
+              </div>
+              <a
+                href={data.user.flashcardsActivate}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Activate Flashcards
+              </a>
+            </div>
+          {/if}
+
+          {#if data.user.flashcardsDeck}
+            <div class="bg-gradient-to-br from-green-50 to-green-100/50 rounded-lg p-5 border border-green-200">
+              <div class="mb-4">
+                <h4 class="text-base font-bold text-green-900 mb-2">Step 2: Start Studying</h4>
+                <p class="text-sm text-gray-700 leading-relaxed">
+                  Already activated? Jump into your deck and start practicing.
+                </p>
+              </div>
+              <a
+                href={data.user.flashcardsDeck}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center justify-center gap-2 px-5 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+                Study Now
+              </a>
+            </div>
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Toast -->
   {#if showToast}

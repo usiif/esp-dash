@@ -22,13 +22,27 @@ export async function load({ cookies }) {
     .eq('id', session.student_id)
     .single();
 
+  // Brainscape deck URLs by level
+  const brainscapeDeckUrls = {
+    '1': 'https://www.brainscape.com/l/dashboard/level-1-new-spanish-from-zero-23382761/decks',
+    '2': 'https://www.brainscape.com/l/dashboard/level-2-new-spanish-from-zero-23382829/decks',
+    '3': 'https://www.brainscape.com/l/dashboard/level-3-new-beyond-the-basics-23382371/decks',
+    '4': 'https://www.brainscape.com/l/dashboard/nivel-4-new-conversation-basics-23382456/decks',
+    '5': 'https://www.brainscape.com/l/dashboard/nivel-5-new-conversation-foundations-23417363/decks',
+    '6': 'https://www.brainscape.com/l/dashboard/nivel-6-new-conversation-momentum-23417569/decks'
+  };
+
   // Build URLs inline
   const calendarLink = levelNum
     ? `https://calendar.expatspanishlessons.com/live-classes/level-${levelNum}`
     : null;
 
-  const flashcardsShare = levelNum
+  const flashcardsActivate = levelNum
     ? `https://calendar.expatspanishlessons.com/activate-brainscape-cards/level-${levelNum}`
+    : null;
+
+  const flashcardsDeck = levelNum && brainscapeDeckUrls[levelNum]
+    ? brainscapeDeckUrls[levelNum]
     : null;
 
   const user = {
@@ -40,7 +54,8 @@ export async function load({ cookies }) {
     id: session.student_id,
     flashcards_deck: session.flashcards_deck,
     calendarLink,
-    flashcardsShare,
+    flashcardsActivate,
+    flashcardsDeck,
     needs_timezone: !session.tz // Flag if timezone is missing
   };
 
