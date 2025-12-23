@@ -63,6 +63,14 @@
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span>Classes</span>
           </a>
+
+          <a href="/admin/placementquiz"
+             class="px-3 py-2 rounded-md text-sm flex items-center gap-3 hover:bg-orange-50"
+             class:bg-orange-50={pathname.startsWith('/admin/placementquiz')}
+             class:text-orange-600={pathname.startsWith('/admin/placementquiz')}>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Placement Quizzes</span>
+          </a>
         </nav>
       </aside>
   
@@ -73,6 +81,7 @@
             <a href="/admin" class="px-3 py-2 rounded-md text-sm flex items-center gap-3 hover:bg-orange-50">Overview</a>
             <a href="/admin/students" class="px-3 py-2 rounded-md text-sm flex items-center gap-3 hover:bg-orange-50">Students</a>
             <a href="/admin/classes" class="px-3 py-2 rounded-md text-sm flex items-center gap-3 hover:bg-orange-50">Classes</a>
+            <a href="/admin/placementquiz" class="px-3 py-2 rounded-md text-sm flex items-center gap-3 hover:bg-orange-50">Placement Quizzes</a>
           </nav>
         </div>
       {/if}
