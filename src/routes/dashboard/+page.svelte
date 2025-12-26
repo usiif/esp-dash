@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import StudentNav from '$lib/components/StudentNav.svelte';
   import Onboarding from '$lib/components/onboarding.svelte';
+  import PortalPasswordTutorial from '$lib/components/PortalPasswordTutorial.svelte';
 
   export let data;
 
@@ -24,6 +25,14 @@
   let showToast = false;
   let toastMessage = '';
   let showFlashcardsModal = false;
+
+  // Check if we should show the portal password tutorial
+  $: showPortalTutorial = !data.user.ghl_portal_signup && data.user.portal_magic;
+
+  function handleTutorialComplete() {
+    // Reload the page to reflect the updated state
+    window.location.reload();
+  }
 
   // Prep status: enrollment_id -> Set of completed prep_item_ids
   $: prepStatus = Object.entries(data.prepStatus || {}).reduce((acc, [enrollmentId, itemIds]) => {
@@ -155,9 +164,9 @@
   <Onboarding {data} />
 
   <!-- Main Content with padding for desktop sidebar -->
-  <main class="lg:ml-56 p-4 sm:p-6 max-w-7xl">
+  <main class="lg:ml-56 h-screen flex flex-col overflow-y-auto">
     <!-- Welcome Header -->
-    <div class="mb-6">
+    <div class="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 flex-shrink-0">
       <h1 class="text-2xl font-bold text-gray-900 mb-1">Welcome back, {data.user.name}!</h1>
       {#if data.user.level}
         <p class="text-sm text-gray-600">
@@ -169,7 +178,7 @@
     </div>
 
     <!-- Two Column Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="px-4 sm:px-6 pb-6 grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
       <!-- Left Column: Quick Actions (2 columns on desktop) -->
       <div class="lg:col-span-2">
         <h2 class="text-lg font-semibold text-gray-900 mb-3">Quick Actions</h2>
@@ -204,6 +213,7 @@
 
           <!-- Online Courses -->
           <a
+            id="online-courses-card"
             href="https://community.expatspanishlessons.com/courses/library-v2"
             target="_blank"
             rel="noopener noreferrer"
@@ -437,6 +447,14 @@
         </div>
       </div>
     </div>
+  {/if}
+
+  <!-- Portal Password Tutorial -->
+  {#if showPortalTutorial}
+    <PortalPasswordTutorial
+      portalMagic={data.user.portal_magic}
+      onComplete={handleTutorialComplete}
+    />
   {/if}
 
   <!-- Toast -->

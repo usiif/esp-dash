@@ -4,6 +4,7 @@
   import { onMount } from 'svelte';
   import StudentNav from '$lib/components/StudentNav.svelte';
   import Onboarding from '$lib/components/onboarding.svelte';
+  import AccessRestrictionModal from '$lib/components/AccessRestrictionModal.svelte';
 
   export let data;
 
@@ -445,9 +446,9 @@
   <Onboarding {data} />
 
   <!-- Main Content -->
-  <main class="lg:ml-56 p-4 sm:p-6 max-w-7xl">
+  <main class="lg:ml-56 relative h-screen flex flex-col">
     <!-- Header -->
-    <div class="mb-6">
+    <div class="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 flex-shrink-0">
       <div class="flex items-center justify-between flex-wrap gap-4">
         <div>
           <div class="flex items-baseline gap-2">
@@ -528,7 +529,7 @@
 
     <!-- Timezone Info Banner -->
     {#if viewingTz !== profileTz}
-      <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start justify-between gap-3">
+      <div class="mx-4 sm:mx-6 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start justify-between gap-3 flex-shrink-0">
         <div class="flex-1">
           <p class="text-sm text-blue-900">
             Viewing times in <span class="font-semibold">{viewingTz}</span>.
@@ -559,7 +560,7 @@
     {/if}
 
     <!-- Calendar View -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative">
+    <div class="mx-4 sm:mx-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative flex-1 flex flex-col">
       <!-- Weekday Headers -->
       <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
         {#each ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as day}
@@ -571,13 +572,13 @@
       </div>
 
       <!-- Calendar Grid -->
-      <div class="grid grid-cols-7">
+      <div class="grid grid-cols-7 h-full">
         {#each calendarDays as { date, isCurrentMonth }}
           {@const dayClasses = getClassesForDay(date)}
           {@const isToday = date.toDateString() === today.toDateString()}
 
           <div
-            class="min-h-20 sm:min-h-24 md:min-h-32 border-r border-b border-gray-200 p-1 sm:p-2 bg-white"
+            class="border-r border-b border-gray-200 p-1 sm:p-2 bg-white"
           >
             <!-- Day Number -->
             <div class="flex items-center justify-between mb-1">
@@ -651,7 +652,7 @@
     </div>
 
     <!-- Legend -->
-    <div class="mt-4 flex flex-wrap gap-4 text-sm">
+    <div class="mx-4 sm:mx-6 my-4 flex flex-wrap gap-4 text-sm flex-shrink-0">
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-orange-100 rounded"></div>
         <span class="text-gray-600">Available</span>
@@ -669,6 +670,9 @@
         <span class="text-gray-600">Past classes</span>
       </div>
     </div>
+
+    <!-- Access Restriction Modal (inside main content area) -->
+    <AccessRestrictionModal accessLevel={data.user.access_level} />
   </main>
 
   <!-- Class Details Modal -->

@@ -33,7 +33,8 @@ export async function load({ cookies, url }) {
     user: {
       name: session.first_name,
       email: studentData?.email || '',
-      id: session.student_id
+      id: session.student_id,
+      level_key: session.level_key || null
     }
   };
 }

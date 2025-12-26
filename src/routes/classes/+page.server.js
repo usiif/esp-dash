@@ -31,6 +31,13 @@ export async function load({ cookies, url }) {
   const profileTz = session.tz || 'UTC';
   const viewingTz = url.searchParams.get('tz') || profileTz;
 
+  // Fetch student's access_level
+  const { data: studentData } = await supabase
+    .from('students')
+    .select('access_level')
+    .eq('id', session.student_id)
+    .single();
+
   const user = {
     name: session.first_name,
     level: session.level_key,
@@ -40,7 +47,8 @@ export async function load({ cookies, url }) {
     flashcards_deck: session.flashcards_deck,
     calendarLink,
     flashcardsShare,
-    tz: profileTz
+    tz: profileTz,
+    access_level: studentData?.access_level || null
   };
 
   // Fetch available classes (2 weeks past through 4 weeks future)

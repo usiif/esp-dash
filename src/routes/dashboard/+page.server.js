@@ -15,10 +15,10 @@ export async function load({ cookies }) {
   // Extract number from "Level 4" → "4"
   const levelNum = session.level_key?.match(/\d+/)?.[0] ?? null;
 
-  // Get student email
+  // Get student email and portal signup info
   const { data: studentData } = await supabase
     .from('students')
-    .select('email')
+    .select('email, ghl_portal_signup, portal_magic')
     .eq('id', session.student_id)
     .single();
 
@@ -56,7 +56,9 @@ export async function load({ cookies }) {
     calendarLink,
     flashcardsActivate,
     flashcardsDeck,
-    needs_timezone: !session.tz // Flag if timezone is missing
+    needs_timezone: !session.tz, // Flag if timezone is missing
+    portal_magic: studentData?.portal_magic || null,
+    ghl_portal_signup: studentData?.ghl_portal_signup || false
   };
 
   // Fetch available classes (upcoming classes + recent past classes within 5 hours)
